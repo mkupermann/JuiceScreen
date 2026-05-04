@@ -697,3 +697,18 @@ The implementation plan will detail tasks per milestone. Rough phasing:
 - Sticky-region masks for scroll capture (mitigation for the 30% failure case)
 - Beta update channel
 - Code signing + notarization (if user base grows enough to warrant $99/yr)
+
+---
+
+## Implementation status (updated as plans complete)
+
+- ✅ **Plan 1: Foundation** (v0.1.0, 2026-05-05) — XcodeGen project, menu-bar accessory app, Permissions service (Live + Fake), Carbon hotkey wrapper, ActivationPolicyController, MenuBarController + dropdown builder, Preferences value type + UserDefaults-backed store, first-run flow (4-state coordinator + 3 SwiftUI views + window host), Settings stub with 6 tabs, GitHub Actions CI, README, UI smoke test scaffolding. 26 unit tests passing across 6 suites. UI tests deferred until Apple Developer ID is available (ad-hoc signing causes team-ID mismatch on macOS 26 UI test runner)
+- ⬜ Plan 2: Image capture
+- ⬜ Plan 3: Annotation editor
+- ⬜ Plan 4: Library + storage
+- ⬜ Plan 5: OCR + search
+- ⬜ Plan 6: Video recording
+- ⬜ Plan 7: Trim + post-record
+- ⬜ Plan 8: Scroll capture
+- ⬜ Plan 9: PDF export + Sparkle + Settings completion
+- ⬜ Plan 10: Build pipeline + ship v1.0.0
