@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Xcode (generated)
+*.xcodeproj/
+DerivedData/
+build/
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+*.moved-aside
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+.swiftpm/
+
+# IDE noise
+.idea/
+.vscode/
+
+# CI / local
+*.dmg
+*.zip
+appcast/appcast.xml.bak
+
+# Sparkle private key — never commit
+sparkle_keys/
