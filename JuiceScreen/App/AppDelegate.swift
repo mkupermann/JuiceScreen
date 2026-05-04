@@ -37,11 +37,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Hotkeys
         registerHotkeys(prefs: prefs, actions: actions)
 
-        // First-run wizard (no-op if already complete)
-        let coordinator = FirstRunCoordinator(permissions: permissions, preferences: preferences)
-        firstRun = coordinator
-        coordinator.start()
-        FirstRunWindow.showIfNeeded(coordinator: coordinator)
+        // First-run wizard (no-op if already complete OR if running in UI test mode)
+        if ProcessInfo.processInfo.environment["JUICESCREEN_UI_TEST_MODE"] == nil {
+            let coordinator = FirstRunCoordinator(permissions: permissions, preferences: preferences)
+            firstRun = coordinator
+            coordinator.start()
+            FirstRunWindow.showIfNeeded(coordinator: coordinator)
+        }
     }
 
     private func registerHotkeys(prefs: Preferences, actions: MenuBarActions) {
