@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -project JuiceScreen.xcodeproj \
+            -scheme JuiceScreen \
+            -destination 'platform=macOS' \
+            -configuration Debug \
+            build | xcbeautify
+        shell: bash
+
+      - name: Test (unit only — UI tests skipped due to ad-hoc signing)
+        run: |
+          xcodebuild \
+            -project JuiceScreen.xcodeproj \
+            -scheme JuiceScreen \
+            -destination 'platform=macOS' \
+            -configuration Debug \
+            -only-testing:JuiceScreenTests \
+            test | xcbeautify
+        shell: bash
+
+      - name: Print version
+        run: cat VERSION
