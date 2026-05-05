@@ -58,6 +58,17 @@ public final class LibraryViewModel {
         }
     }
 
+    public func restoreSelected() async {
+        guard let id = selectedID else { return }
+        do {
+            try await store.restore(id: id)
+            selectedID = nil
+            await reload()
+        } catch {
+            log.error("restore failed: \(String(describing: error))")
+        }
+    }
+
     public func revealSelectedInFinder() {
         guard let row = selectedCapture else { return }
         let url = URL(fileURLWithPath: row.filePath)

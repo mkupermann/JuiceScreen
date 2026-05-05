@@ -51,8 +51,10 @@ struct InspectorView: View {
 
             // Action buttons
             VStack(alignment: .leading, spacing: 6) {
-                Button { onOpen(row) } label: {
-                    Label("Open in Editor", systemImage: "pencil.tip.crop.circle")
+                if !row.isDeleted {
+                    Button { onOpen(row) } label: {
+                        Label("Open in Editor", systemImage: "pencil.tip.crop.circle")
+                    }
                 }
                 Button { vm.revealSelectedInFinder() } label: {
                     Label("Reveal in Finder", systemImage: "folder")
@@ -60,7 +62,13 @@ struct InspectorView: View {
                 Button { vm.copySelectedFile() } label: {
                     Label("Copy File", systemImage: "doc.on.doc")
                 }
-                if row.isDeleted == false {
+                if row.isDeleted {
+                    Button {
+                        Task { await vm.restoreSelected() }
+                    } label: {
+                        Label("Restore", systemImage: "arrow.uturn.backward")
+                    }
+                } else {
                     Button(role: .destructive) {
                         Task { await vm.moveSelectedToTrash() }
                     } label: {

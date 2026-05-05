@@ -111,4 +111,25 @@ struct LibraryViewModelTests {
         await vm.runSearchNow()
         #expect(vm.captures.count == 1)
     }
+
+    @Test("restoreSelected calls store.restore and reloads with the restored row visible")
+    func restoreSelectedRestoresRow() async throws {
+        let store = FakeLibraryStore()
+        let trashed = makeRow(deleted: true)
+        let rowID = trashed.uuid
+        try await store.insert(trashed)
+
+        let vm = LibraryViewModel(store: store, thumbnailStore: ThumbnailStore(paths: LibraryPaths()))
+        await vm.setFilter(.trash)
+        vm.selectedID = rowID
+
+        await vm.restoreSelected()
+
+        // After restore, the row should no longer be in trash filter
+        await vm.setFilter(.trash)
+        #expect(vm.captures.isEmpty)
+
+        await vm.setFilter(.all)
+        #expect(vm.captures.contains { $0.uuid == rowID })
+    }
 }
