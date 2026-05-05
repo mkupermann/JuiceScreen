@@ -22,6 +22,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         EditorWindowManager(preferences: preferences)
     }()
 
+    private var _recordingSessionManager: RecordingSessionManager?
+    private var recordingSessionManager: RecordingSessionManager {
+        if let mgr = _recordingSessionManager { return mgr }
+        let mgr = RecordingSessionManager(
+            recorderFactory: { [permissions] in VideoRecorderLive(permissions: permissions) },
+            onStopComplete: { [weak self] record in
+                guard let self else { return }
+                self.menuBar?.setRecordingIndicator(false)
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    do {
+                        try await self.captureLibraryRecorder.record(record)
+                    } catch {
+                        AppLog.logger(category: "App").error("Library recording failed: \(String(describing: error))")
+                    }
+                }
+            }
+        )
+        _recordingSessionManager = mgr
+        return mgr
+    }
+
     private lazy var libraryPaths: LibraryPaths = LibraryPaths()
 
     private lazy var libraryStore: LibraryStore = {
@@ -113,7 +135,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             captureWindow:     { [weak self] in self?.fireCapture(.window) },
             captureFullScreen: { [weak self] in self?.fireCapture(.fullScreen) },
             captureLastRegion: { [weak self] in self?.fireCapture(.lastRegion) },
-            recordScreen:      { [weak self] in self?.todoLog("recordScreen") },
+            recordScreen:      { [weak self] in self?.handleRecordScreen() },
             openLibrary:       { [weak self] in self?.libraryWindowManager.show() },
             openPreferences:   { SettingsWindow.show() },
             quit:              { NSApp.terminate(nil) }
@@ -168,6 +190,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } catch {
                 log.error("Capture failed: \(String(describing: error))")
             }
+        }
+    }
+
+    private func startRecording() {
+        Task { @MainActor in
+            let mode: VideoRecordingMode = .fullScreen
+            let prefs = preferences.load()
+            let date = Date()
+            let saveDir = SaveDirectoryProvider(rootDirectory: prefs.saveDirectory)
+            let outputURL: URL
+            do {
+                let folder = try saveDir.directory(for: date)
+                let filename = FilenameGenerator().filename(for: date, extension: "mp4")
+                outputURL = folder.appendingPathComponent(filename)
+            } catch {
+                AppLog.logger(category: "App").error("Could not prepare output URL: \(String(describing: error))")
+                return
+            }
+            do {
+                menuBar?.setRecordingIndicator(true)
+                try await recordingSessionManager.start(mode: mode, options: .defaults, outputURL: outputURL)
+            } catch {
+                AppLog.logger(category: "App").error("Recording failed to start: \(String(describing: error))")
+                menuBar?.setRecordingIndicator(false)
+            }
+        }
+    }
+
+    private func stopRecording() {
+        Task { @MainActor in
+            do {
+                try await recordingSessionManager.stop()
+            } catch {
+                AppLog.logger(category: "App").error("Stop failed: \(String(describing: error))")
+            }
+        }
+    }
+
+    private func handleRecordScreen() {
+        if recordingSessionManager.isActive {
+            stopRecording()
+        } else {
+            startRecording()
         }
     }
 
