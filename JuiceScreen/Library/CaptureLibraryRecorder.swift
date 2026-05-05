@@ -37,6 +37,7 @@ public actor CaptureLibraryRecorder {
 
         let row: CaptureRow
         if isVideo {
+            let durationMs = await Self.videoDurationMs(for: record.fileURL)
             row = CaptureRow(
                 uuid: record.id,
                 filePath: record.fileURL.path,
@@ -46,7 +47,7 @@ public actor CaptureLibraryRecorder {
                 capturedAt: record.capturedAt,
                 pixelWidth: record.pixelWidth,
                 pixelHeight: record.pixelHeight,
-                durationMs: nil,
+                durationMs: durationMs,
                 fileSizeBytes: fileSize,
                 sourceApp: record.sourceApp,
                 deletedAt: nil
@@ -63,6 +64,18 @@ public actor CaptureLibraryRecorder {
             Task.detached { [pipeline, captureID = record.id, fileURL = record.fileURL] in
                 try? await pipeline.process(captureID: captureID, fileURL: fileURL)
             }
+        }
+    }
+
+    private static func videoDurationMs(for url: URL) async -> Int? {
+        let asset = AVURLAsset(url: url)
+        do {
+            let duration = try await asset.load(.duration)
+            let seconds = CMTimeGetSeconds(duration)
+            guard seconds.isFinite, seconds >= 0 else { return nil }
+            return Int((seconds * 1000).rounded())
+        } catch {
+            return nil
         }
     }
 
