@@ -15,6 +15,8 @@ CleanShot X is excellent but proprietary. JuiceScreen aims to be the lean open-s
 
 **v0.5 update — local OCR + search.** Every screenshot now runs through Apple's Vision framework on a background queue: extracted text and per-region bounding boxes land in a JSON sidecar at `~/Library/Application Support/JuiceScreen/ocr/<uuid>.json`, and the concatenated text is indexed in an FTS5 SQLite table. The library window's search bar accepts free text plus filters: `aws error from:Safari after:2026-04-15 type:image`. Vision runs entirely on-device — no text ever leaves the machine.
 
+**v0.6 update — local video recording.** Press `⌘⇧5` to start a full-screen recording. ScreenCaptureKit captures the primary display at 60fps, system audio mixes in by default, and a yellow ring follows the cursor in every frame. Optional microphone capture and Input-Monitoring-gated overlays (click pulse, last-3-keystrokes chip in the corner) are available in Settings → Recording. A small floating control bar shows duration + a stop button. MP4 H.264 files land at `~/Pictures/JuiceScreen/<date>/JuiceScreen_<timestamp>.mp4` and appear as `.video` rows in the library. Trim handles + post-record editing arrive in v0.7.
+
 See `docs/superpowers/specs/2026-05-04-juicescreen-design.md` for the full design.
 
 ## Installing
