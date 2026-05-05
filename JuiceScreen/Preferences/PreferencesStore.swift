@@ -18,6 +18,18 @@ public final class PreferencesStore: @unchecked Sendable {
         static let captureScrollHotkey = "captureScrollHotkey"
         static let hotkeysPaused = "hotkeysPaused"
         static let lastRegion = "lastRegion"
+
+        // v0.9
+        static let recTargetFps = "recordingTargetFps"
+        static let recSystemAudio = "recordingSystemAudio"
+        static let recMicrophone = "recordingMicrophone"
+        static let recCursorHighlight = "recordingCursorHighlight"
+        static let recClickPulse = "recordingClickPulse"
+        static let recKeystrokes = "recordingKeystrokes"
+        static let includeCursorInStills = "includeCursorInStills"
+        static let imageScale = "imageScale"
+        static let updateAutoCheckEnabled = "updateAutoCheckEnabled"
+        static let updateLastCheckedAt = "updateLastCheckedAt"
     }
 
     private let defaults: UserDefaults
@@ -28,6 +40,16 @@ public final class PreferencesStore: @unchecked Sendable {
 
     public func load() -> Preferences {
         let d = Preferences.defaults
+        let opts = VideoRecordingOptions(
+            targetFps:           defaults.object(forKey: Key.recTargetFps) as? Int ?? d.recordingOptions.targetFps,
+            captureSystemAudio:  defaults.object(forKey: Key.recSystemAudio) as? Bool ?? d.recordingOptions.captureSystemAudio,
+            captureMicrophone:   defaults.object(forKey: Key.recMicrophone) as? Bool ?? d.recordingOptions.captureMicrophone,
+            showCursorHighlight: defaults.object(forKey: Key.recCursorHighlight) as? Bool ?? d.recordingOptions.showCursorHighlight,
+            showClickPulse:      defaults.object(forKey: Key.recClickPulse) as? Bool ?? d.recordingOptions.showClickPulse,
+            showKeystrokes:      defaults.object(forKey: Key.recKeystrokes) as? Bool ?? d.recordingOptions.showKeystrokes
+        )
+        let imageScale: ImageScale = (defaults.string(forKey: Key.imageScale).flatMap(ImageScale.init(rawValue:))) ?? d.imageScale
+        let lastCheckedSeconds = defaults.object(forKey: Key.updateLastCheckedAt) as? Double
         return Preferences(
             firstRunComplete:        defaults.object(forKey: Key.firstRunComplete) as? Bool ?? d.firstRunComplete,
             startAtLogin:            defaults.object(forKey: Key.startAtLogin) as? Bool ?? d.startAtLogin,
@@ -43,11 +65,11 @@ public final class PreferencesStore: @unchecked Sendable {
             captureScrollHotkey:     loadHotkey(Key.captureScrollHotkey)     ?? d.captureScrollHotkey,
             hotkeysPaused:           defaults.object(forKey: Key.hotkeysPaused) as? Bool ?? d.hotkeysPaused,
             lastRegion:              loadRect(Key.lastRegion),
-            recordingOptions:        d.recordingOptions,
-            includeCursorInStills:   d.includeCursorInStills,
-            imageScale:              d.imageScale,
-            updateAutoCheckEnabled:  d.updateAutoCheckEnabled,
-            updateLastCheckedAt:     d.updateLastCheckedAt
+            recordingOptions:        opts,
+            includeCursorInStills:   defaults.object(forKey: Key.includeCursorInStills) as? Bool ?? d.includeCursorInStills,
+            imageScale:              imageScale,
+            updateAutoCheckEnabled:  defaults.object(forKey: Key.updateAutoCheckEnabled) as? Bool ?? d.updateAutoCheckEnabled,
+            updateLastCheckedAt:     lastCheckedSeconds.map { Date(timeIntervalSince1970: $0) }
         )
     }
 
@@ -66,6 +88,21 @@ public final class PreferencesStore: @unchecked Sendable {
         saveHotkey(prefs.captureScrollHotkey,     key: Key.captureScrollHotkey)
         defaults.set(prefs.hotkeysPaused, forKey: Key.hotkeysPaused)
         saveRect(prefs.lastRegion, key: Key.lastRegion)
+
+        defaults.set(prefs.recordingOptions.targetFps, forKey: Key.recTargetFps)
+        defaults.set(prefs.recordingOptions.captureSystemAudio, forKey: Key.recSystemAudio)
+        defaults.set(prefs.recordingOptions.captureMicrophone, forKey: Key.recMicrophone)
+        defaults.set(prefs.recordingOptions.showCursorHighlight, forKey: Key.recCursorHighlight)
+        defaults.set(prefs.recordingOptions.showClickPulse, forKey: Key.recClickPulse)
+        defaults.set(prefs.recordingOptions.showKeystrokes, forKey: Key.recKeystrokes)
+        defaults.set(prefs.includeCursorInStills, forKey: Key.includeCursorInStills)
+        defaults.set(prefs.imageScale.rawValue, forKey: Key.imageScale)
+        defaults.set(prefs.updateAutoCheckEnabled, forKey: Key.updateAutoCheckEnabled)
+        if let date = prefs.updateLastCheckedAt {
+            defaults.set(date.timeIntervalSince1970, forKey: Key.updateLastCheckedAt)
+        } else {
+            defaults.removeObject(forKey: Key.updateLastCheckedAt)
+        }
     }
 
     // MARK: - Helpers

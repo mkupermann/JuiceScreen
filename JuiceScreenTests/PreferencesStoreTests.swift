@@ -91,4 +91,58 @@ struct PreferencesStoreTests {
         #expect(prefs.updateAutoCheckEnabled == true)
         #expect(prefs.updateLastCheckedAt == nil)
     }
+
+    @Test("Recording options round-trip")
+    func recordingOptionsRoundTrip() {
+        let (store, _) = makeEphemeralStore()
+        var prefs = store.load()
+        prefs.recordingOptions = VideoRecordingOptions(
+            targetFps: 30,
+            captureSystemAudio: false,
+            captureMicrophone: true,
+            showCursorHighlight: false,
+            showClickPulse: true,
+            showKeystrokes: true
+        )
+        store.save(prefs)
+
+        let reloaded = store.load()
+        #expect(reloaded.recordingOptions.targetFps == 30)
+        #expect(reloaded.recordingOptions.captureSystemAudio == false)
+        #expect(reloaded.recordingOptions.captureMicrophone == true)
+        #expect(reloaded.recordingOptions.showCursorHighlight == false)
+        #expect(reloaded.recordingOptions.showClickPulse == true)
+        #expect(reloaded.recordingOptions.showKeystrokes == true)
+    }
+
+    @Test("Capture and update fields round-trip")
+    func captureAndUpdateRoundTrip() {
+        let (store, _) = makeEphemeralStore()
+        var prefs = store.load()
+        prefs.includeCursorInStills = true
+        prefs.imageScale = .oneToOne
+        prefs.updateAutoCheckEnabled = false
+        prefs.updateLastCheckedAt = Date(timeIntervalSince1970: 1_715_000_000)
+        store.save(prefs)
+
+        let reloaded = store.load()
+        #expect(reloaded.includeCursorInStills == true)
+        #expect(reloaded.imageScale == .oneToOne)
+        #expect(reloaded.updateAutoCheckEnabled == false)
+        #expect(reloaded.updateLastCheckedAt == Date(timeIntervalSince1970: 1_715_000_000))
+    }
+
+    @Test("updateLastCheckedAt removed when set to nil")
+    func updateLastCheckedAtClears() {
+        let (store, defaults) = makeEphemeralStore()
+        var prefs = store.load()
+        prefs.updateLastCheckedAt = Date(timeIntervalSince1970: 1_715_000_000)
+        store.save(prefs)
+        #expect(defaults.object(forKey: "updateLastCheckedAt") != nil)
+
+        prefs.updateLastCheckedAt = nil
+        store.save(prefs)
+        #expect(defaults.object(forKey: "updateLastCheckedAt") == nil)
+        #expect(store.load().updateLastCheckedAt == nil)
+    }
 }
