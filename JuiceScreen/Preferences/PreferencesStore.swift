@@ -15,6 +15,7 @@ public final class PreferencesStore: @unchecked Sendable {
         static let captureLastRegionHotkey = "captureLastRegionHotkey"
         static let recordScreenHotkey = "recordScreenHotkey"
         static let openLibraryHotkey = "openLibraryHotkey"
+        static let captureScrollHotkey = "captureScrollHotkey"
         static let hotkeysPaused = "hotkeysPaused"
         static let lastRegion = "lastRegion"
     }
@@ -39,6 +40,7 @@ public final class PreferencesStore: @unchecked Sendable {
             captureLastRegionHotkey: loadHotkey(Key.captureLastRegionHotkey) ?? d.captureLastRegionHotkey,
             recordScreenHotkey:      loadHotkey(Key.recordScreenHotkey)      ?? d.recordScreenHotkey,
             openLibraryHotkey:       loadHotkey(Key.openLibraryHotkey)       ?? d.openLibraryHotkey,
+            captureScrollHotkey:     loadHotkey(Key.captureScrollHotkey)     ?? d.captureScrollHotkey,
             hotkeysPaused:           defaults.object(forKey: Key.hotkeysPaused) as? Bool ?? d.hotkeysPaused,
             lastRegion:              loadRect(Key.lastRegion)
         )
@@ -56,6 +58,7 @@ public final class PreferencesStore: @unchecked Sendable {
         saveHotkey(prefs.captureLastRegionHotkey, key: Key.captureLastRegionHotkey)
         saveHotkey(prefs.recordScreenHotkey,      key: Key.recordScreenHotkey)
         saveHotkey(prefs.openLibraryHotkey,       key: Key.openLibraryHotkey)
+        saveHotkey(prefs.captureScrollHotkey,     key: Key.captureScrollHotkey)
         defaults.set(prefs.hotkeysPaused, forKey: Key.hotkeysPaused)
         saveRect(prefs.lastRegion, key: Key.lastRegion)
     }

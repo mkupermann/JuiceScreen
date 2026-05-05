@@ -22,6 +22,7 @@ public struct Preferences: Equatable, Sendable {
     public var captureLastRegionHotkey: Hotkey
     public var recordScreenHotkey: Hotkey
     public var openLibraryHotkey: Hotkey
+    public var captureScrollHotkey: Hotkey
 
     public var hotkeysPaused: Bool
     public var lastRegion: CGRect?
@@ -44,6 +45,7 @@ public struct Preferences: Equatable, Sendable {
             captureLastRegionHotkey: Hotkey(keyCode: 15, modifiers: [.command, .shift]),
             recordScreenHotkey:      Hotkey(keyCode: 23, modifiers: [.command, .shift]),
             openLibraryHotkey:       Hotkey(keyCode: 37, modifiers: [.command, .shift]),
+            captureScrollHotkey:     Hotkey(keyCode: 22, modifiers: [.command, .shift]),
             hotkeysPaused: false,
             lastRegion: nil
         )

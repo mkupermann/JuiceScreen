@@ -70,4 +70,14 @@ struct PreferencesStoreTests {
         let reloaded = store.load()
         #expect(reloaded.lastRegion == CGRect(x: 100, y: 200, width: 300, height: 400))
     }
+
+    @Test("captureScrollHotkey round-trips")
+    func captureScrollHotkeyRoundTrip() {
+        let (store, _) = makeEphemeralStore()
+        var prefs = store.load()
+        prefs.captureScrollHotkey = Hotkey(keyCode: 22, modifiers: [.command, .control])
+        store.save(prefs)
+        let reloaded = store.load()
+        #expect(reloaded.captureScrollHotkey == Hotkey(keyCode: 22, modifiers: [.command, .control]))
+    }
 }

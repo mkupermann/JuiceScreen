@@ -10,6 +10,7 @@ public enum HotkeyAction: UInt32, CaseIterable, Sendable {
     case recordScreen      = 5
     case openLibrary       = 6
     case stopRecording     = 7  // dynamically (un)bound during a recording session
+    case captureScroll     = 8
 }
 
 /// Registers global hotkeys via Carbon and dispatches their fire events to a closure.
