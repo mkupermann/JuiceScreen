@@ -57,4 +57,12 @@ struct PDFEncoderTests {
             try PDFEncoder.encode(empty)
         }
     }
+
+    @Test("Throws zeroSize when image size is zero")
+    func zeroSizeThrows() {
+        let image = NSImage(size: .zero)
+        #expect(throws: PDFEncoder.PDFEncoderError.self) {
+            try PDFEncoder.encode(image)
+        }
+    }
 }
