@@ -26,6 +26,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         TrimEditorWindowManager()
     }()
 
+    private var _scrollCaptureSessionManager: ScrollCaptureSessionManager?
+    private var scrollCaptureSessionManager: ScrollCaptureSessionManager {
+        if let mgr = _scrollCaptureSessionManager { return mgr }
+        let mgr = ScrollCaptureSessionManager(
+            serviceFactory: { ScrollCaptureServiceLive() },
+            saveDirectory: SaveDirectoryProvider(rootDirectory: preferences.load().saveDirectory),
+            onComplete: { [weak self] record in
+                guard let self else { return }
+                AppLog.logger(category: "App").info("Scroll capture → \(record.fileURL.path)")
+                self.editorWindowManager.show(for: record)
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    do {
+                        try await self.captureLibraryRecorder.record(record)
+                    } catch {
+                        AppLog.logger(category: "App").error("Library recording failed: \(String(describing: error))")
+                    }
+                }
+            },
+            onError: { error in
+                if case .userCancelled = error {
+                    AppLog.logger(category: "App").info("Scroll capture cancelled by user")
+                } else {
+                    AppLog.logger(category: "App").error("Scroll capture failed: \(String(describing: error))")
+                }
+            }
+        )
+        _scrollCaptureSessionManager = mgr
+        return mgr
+    }
+
     private var _recordingSessionManager: RecordingSessionManager?
     private var recordingSessionManager: RecordingSessionManager {
         if let mgr = _recordingSessionManager { return mgr }
@@ -144,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             captureWindow:     { [weak self] in self?.fireCapture(.window) },
             captureFullScreen: { [weak self] in self?.fireCapture(.fullScreen) },
             captureLastRegion: { [weak self] in self?.fireCapture(.lastRegion) },
+            captureScroll:     { [weak self] in self?.scrollCaptureSessionManager.begin() },
             recordScreen:      { [weak self] in self?.handleRecordScreen() },
             openLibrary:       { [weak self] in self?.libraryWindowManager.show() },
             openPreferences:   { SettingsWindow.show() },
@@ -167,6 +199,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyService.register(prefs.captureWindowHotkey,     for: .captureWindow)     { actions.captureWindow() }
         hotkeyService.register(prefs.captureFullScreenHotkey, for: .captureFullScreen) { actions.captureFullScreen() }
         hotkeyService.register(prefs.captureLastRegionHotkey, for: .captureLastRegion) { actions.captureLastRegion() }
+        hotkeyService.register(prefs.captureScrollHotkey,     for: .captureScroll)     { actions.captureScroll() }
         hotkeyService.register(prefs.recordScreenHotkey,      for: .recordScreen)      { actions.recordScreen() }
         hotkeyService.register(prefs.openLibraryHotkey,       for: .openLibrary)       { actions.openLibrary() }
     }
@@ -181,7 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case .window:      record = try await engine.captureWindow()
                 case .fullScreen:  record = try await engine.captureFullScreen()
                 case .lastRegion:  record = try await engine.captureLastRegion()
-                case .scroll:      fatalError("Scroll capture not yet implemented")
+                case .scroll:      scrollCaptureSessionManager.begin(); return
                 }
                 log.info("Captured \(String(describing: record.captureType)) → \(record.fileURL.path)")
                 editorWindowManager.show(for: record)

@@ -9,6 +9,7 @@ public struct MenuBarActions {
     public var captureWindow: () -> Void
     public var captureFullScreen: () -> Void
     public var captureLastRegion: () -> Void
+    public var captureScroll: () -> Void
     public var recordScreen: () -> Void
     public var openLibrary: () -> Void
     public var openPreferences: () -> Void
@@ -18,6 +19,7 @@ public struct MenuBarActions {
                 captureWindow: @escaping () -> Void,
                 captureFullScreen: @escaping () -> Void,
                 captureLastRegion: @escaping () -> Void,
+                captureScroll: @escaping () -> Void,
                 recordScreen: @escaping () -> Void,
                 openLibrary: @escaping () -> Void,
                 openPreferences: @escaping () -> Void,
@@ -26,6 +28,7 @@ public struct MenuBarActions {
         self.captureWindow = captureWindow
         self.captureFullScreen = captureFullScreen
         self.captureLastRegion = captureLastRegion
+        self.captureScroll = captureScroll
         self.recordScreen = recordScreen
         self.openLibrary = openLibrary
         self.openPreferences = openPreferences
@@ -52,6 +55,9 @@ public enum MenuBarMenuBuilder {
         menu.addItem(item("Capture Last Region",
                           shortcut: KeyCodeFormatter.string(for: prefs.captureLastRegionHotkey),
                           action: actions.captureLastRegion))
+        menu.addItem(item("Capture Scrolling…",
+                          shortcut: KeyCodeFormatter.string(for: prefs.captureScrollHotkey),
+                          action: actions.captureScroll))
 
         menu.addItem(.separator())
         menu.addItem(item("Record Screen",
