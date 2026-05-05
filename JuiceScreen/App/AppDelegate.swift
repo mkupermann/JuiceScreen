@@ -181,6 +181,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case .window:      record = try await engine.captureWindow()
                 case .fullScreen:  record = try await engine.captureFullScreen()
                 case .lastRegion:  record = try await engine.captureLastRegion()
+                case .scroll:      fatalError("Scroll capture not yet implemented")
                 }
                 log.info("Captured \(String(describing: record.captureType)) → \(record.fileURL.path)")
                 editorWindowManager.show(for: record)
