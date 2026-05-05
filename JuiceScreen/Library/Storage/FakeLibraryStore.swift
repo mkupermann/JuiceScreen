@@ -65,6 +65,13 @@ public final class FakeLibraryStore: LibraryStore, @unchecked Sendable {
         rows.removeValue(forKey: id)
     }
 
+    public func emptyTrash() async throws -> Int {
+        lock.lock(); defer { lock.unlock() }
+        let deletedKeys = rows.compactMap { key, value in value.isDeleted ? key : nil }
+        for key in deletedKeys { rows.removeValue(forKey: key) }
+        return deletedKeys.count
+    }
+
     public func updateThumbnailPath(id: UUID, thumbnailPath: String) async throws {
         lock.lock(); defer { lock.unlock() }
         guard let existing = rows[id] else { throw LibraryStoreError.notFound }

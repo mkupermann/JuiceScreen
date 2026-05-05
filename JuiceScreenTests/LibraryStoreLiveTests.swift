@@ -111,4 +111,27 @@ struct LibraryStoreLiveTests {
         #expect(images.map { $0.uuid } == [image.uuid])
         #expect(videos.map { $0.uuid } == [video.uuid])
     }
+
+    @Test("emptyTrash hard-deletes all soft-deleted rows from the live store")
+    func emptyTrashLive() async throws {
+        let store = try makeStore()
+        let live = makeRow(deleted: false)
+        let trashedA = makeRow(deleted: true)
+        let trashedB = makeRow(deleted: true)
+        try await store.insert(live)
+        try await store.insert(trashedA)
+        try await store.insert(trashedB)
+
+        let removed = try await store.emptyTrash()
+        #expect(removed == 2)
+
+        // Trash filter is empty
+        let trashRows = try await store.list(filter: .trash)
+        #expect(trashRows.isEmpty)
+
+        // Live filter has 1
+        let allRows = try await store.list(filter: .all)
+        #expect(allRows.count == 1)
+        #expect(allRows.first?.uuid == live.uuid)
+    }
 }

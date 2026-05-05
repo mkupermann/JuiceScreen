@@ -185,4 +185,22 @@ struct FakeLibraryStoreTests {
         let hits = try await store.search(query: SearchQuery())
         #expect(hits.map { $0.uuid } == [newest.uuid, oldest.uuid])
     }
+
+    @Test("emptyTrash removes all soft-deleted rows and returns the count")
+    func emptyTrashRemovesDeleted() async throws {
+        let store = FakeLibraryStore()
+        let live = makeRow(deleted: false)
+        let trashedA = makeRow(deleted: true)
+        let trashedB = makeRow(deleted: true)
+        try await store.insert(live)
+        try await store.insert(trashedA)
+        try await store.insert(trashedB)
+
+        let removed = try await store.emptyTrash()
+        #expect(removed == 2)
+
+        let remaining = try await store.list(filter: .all)
+        #expect(remaining.count == 1)
+        #expect(remaining.first?.uuid == live.uuid)
+    }
 }

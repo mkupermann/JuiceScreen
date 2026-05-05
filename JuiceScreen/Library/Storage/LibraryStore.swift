@@ -25,4 +25,9 @@ public protocol LibraryStore: Sendable {
 
     /// Returns (id, filePath) for live image captures that have no FTS5 entry yet.
     func captureIDsWithoutOCR() async throws -> [(id: UUID, filePath: String)]
+
+    /// Permanently deletes every row that has been soft-deleted (deletedAt != nil).
+    /// Returns the count of rows removed. Does NOT delete the underlying files —
+    /// callers must handle file deletion via TrashService.
+    func emptyTrash() async throws -> Int
 }
