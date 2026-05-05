@@ -10,11 +10,17 @@ public final class LibraryViewModel {
     public private(set) var captures: [CaptureRow] = []
     public var selectedID: UUID? = nil
     public var tileSize: CGFloat = 150     // 100–300pt slider
-    public var searchText: String = ""     // wired to a no-op Plan 5 placeholder for now
+    public var searchText: String = "" {
+        didSet { scheduleDebouncedSearch() }
+    }
 
     private let store: LibraryStore
     public let thumbnailStore: ThumbnailStore
     private let log = AppLog.logger(category: "LibraryViewModel")
+
+    private let parser = SearchQueryParser()
+    private var searchDebounceTask: Task<Void, Never>?
+    private static let debounceMillis: UInt64 = 300
 
     public init(store: LibraryStore, thumbnailStore: ThumbnailStore) {
         self.store = store
@@ -64,5 +70,29 @@ public final class LibraryViewModel {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.writeObjects([url as NSURL])
+    }
+
+    private func scheduleDebouncedSearch() {
+        searchDebounceTask?.cancel()
+        searchDebounceTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: Self.debounceMillis * 1_000_000)
+            guard let self, !Task.isCancelled else { return }
+            await runSearchNow()
+        }
+    }
+
+    public func runSearchNow() async {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            await reload()
+            return
+        }
+        let q = parser.parse(trimmed)
+        do {
+            captures = try await store.search(query: q)
+        } catch {
+            log.error("Search failed: \(String(describing: error))")
+            captures = []
+        }
     }
 }

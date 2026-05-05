@@ -78,4 +78,37 @@ struct LibraryViewModelTests {
         #expect(vm.captures.count == 1)
         #expect(vm.captures.first?.deletedAt != nil)
     }
+
+    @Test("Setting searchText to a parsed query causes reload to use store.search")
+    func searchTextDrivesSearch() async throws {
+        let store = FakeLibraryStore()
+        let safari = makeRow()
+        try await store.insert(CaptureRow(uuid: safari.uuid, filePath: safari.filePath, annotationPath: nil,
+            thumbnailPath: safari.thumbnailPath, mediaType: .image, capturedAt: safari.capturedAt,
+            pixelWidth: 100, pixelHeight: 100, durationMs: nil, fileSizeBytes: 100,
+            sourceApp: "Safari", deletedAt: nil))
+
+        let chrome = makeRow()
+        try await store.insert(CaptureRow(uuid: chrome.uuid, filePath: chrome.filePath, annotationPath: nil,
+            thumbnailPath: chrome.thumbnailPath, mediaType: .image, capturedAt: chrome.capturedAt,
+            pixelWidth: 100, pixelHeight: 100, durationMs: nil, fileSizeBytes: 100,
+            sourceApp: "Chrome", deletedAt: nil))
+
+        let vm = LibraryViewModel(store: store, thumbnailStore: ThumbnailStore(paths: LibraryPaths()))
+        vm.searchText = "from:Safari"
+        await vm.runSearchNow()
+
+        #expect(vm.captures.count == 1)
+        #expect(vm.captures.first!.uuid == safari.uuid)
+    }
+
+    @Test("Empty searchText falls back to filter-based reload")
+    func emptySearchUsesFilter() async throws {
+        let store = FakeLibraryStore()
+        try await store.insert(makeRow())
+        let vm = LibraryViewModel(store: store, thumbnailStore: ThumbnailStore(paths: LibraryPaths()))
+        vm.searchText = ""
+        await vm.runSearchNow()
+        #expect(vm.captures.count == 1)
+    }
 }
