@@ -42,7 +42,12 @@ public final class PreferencesStore: @unchecked Sendable {
             openLibraryHotkey:       loadHotkey(Key.openLibraryHotkey)       ?? d.openLibraryHotkey,
             captureScrollHotkey:     loadHotkey(Key.captureScrollHotkey)     ?? d.captureScrollHotkey,
             hotkeysPaused:           defaults.object(forKey: Key.hotkeysPaused) as? Bool ?? d.hotkeysPaused,
-            lastRegion:              loadRect(Key.lastRegion)
+            lastRegion:              loadRect(Key.lastRegion),
+            recordingOptions:        d.recordingOptions,
+            includeCursorInStills:   d.includeCursorInStills,
+            imageScale:              d.imageScale,
+            updateAutoCheckEnabled:  d.updateAutoCheckEnabled,
+            updateLastCheckedAt:     d.updateLastCheckedAt
         )
     }
 

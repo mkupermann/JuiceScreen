@@ -80,4 +80,15 @@ struct PreferencesStoreTests {
         let reloaded = store.load()
         #expect(reloaded.captureScrollHotkey == Hotkey(keyCode: 22, modifiers: [.command, .control]))
     }
+
+    @Test("Defaults expose new v0.9 fields")
+    func newFieldDefaults() {
+        let (store, _) = makeEphemeralStore()
+        let prefs = store.load()
+        #expect(prefs.recordingOptions == VideoRecordingOptions.defaults)
+        #expect(prefs.includeCursorInStills == false)
+        #expect(prefs.imageScale == .retina)
+        #expect(prefs.updateAutoCheckEnabled == true)
+        #expect(prefs.updateLastCheckedAt == nil)
+    }
 }
