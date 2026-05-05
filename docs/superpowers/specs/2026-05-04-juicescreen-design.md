@@ -703,7 +703,7 @@ The implementation plan will detail tasks per milestone. Rough phasing:
 ## Implementation status (updated as plans complete)
 
 - ✅ **Plan 1: Foundation** (v0.1.0, 2026-05-05) — XcodeGen project, menu-bar accessory app, Permissions service (Live + Fake), Carbon hotkey wrapper, ActivationPolicyController, MenuBarController + dropdown builder, Preferences value type + UserDefaults-backed store, first-run flow (4-state coordinator + 3 SwiftUI views + window host), Settings stub with 6 tabs, GitHub Actions CI, README, UI smoke test scaffolding. 26 unit tests passing across 6 suites. UI tests deferred until Apple Developer ID is available (ad-hoc signing causes team-ID mismatch on macOS 26 UI test runner)
-- ⬜ Plan 2: Image capture
+- ✅ **Plan 2: Image capture** (v0.2.0, 2026-05-05) — Region / window / full-screen / last-region capture all working. Files saved as PNG to `~/Pictures/JuiceScreen/YYYY-MM-DD/`. ScreenCaptureKit-based via `SCScreenshotManager`, `SCContentSharingPicker`, `SCShareableContent`. Custom transparent NSWindow region picker (no loupe / no edge snapping yet — deferred to a polish pass). Multi-display picker for 2+ displays. Last-region persists in UserDefaults. 55 unit tests across 13 suites passing
 - ⬜ Plan 3: Annotation editor
 - ⬜ Plan 4: Library + storage
 - ⬜ Plan 5: OCR + search
