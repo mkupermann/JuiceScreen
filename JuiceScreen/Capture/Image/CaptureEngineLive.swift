@@ -7,12 +7,14 @@ import ScreenCaptureKit
 public final class CaptureEngineLive: CaptureEngine {
 
     private let writer: CaptureRecordWriter
+    private let preferences: PreferencesStore
     private let windowPicker: WindowPickerService
     private let regionPicker: RegionPickerController
     private let log = AppLog.logger(category: "CaptureEngineLive")
 
-    public init(writer: CaptureRecordWriter) {
+    public init(writer: CaptureRecordWriter, preferences: PreferencesStore) {
         self.writer = writer
+        self.preferences = preferences
         self.windowPicker = WindowPickerService()
         self.regionPicker = RegionPickerController()
     }
@@ -30,8 +32,37 @@ public final class CaptureEngineLive: CaptureEngine {
     }
 
     nonisolated public func captureLastRegion() async throws -> CaptureRecord {
-        // Implemented in Task 17
-        throw CaptureError.captureFailed(underlying: "captureLastRegion not yet implemented")
+        try await captureLastRegionInternal()
+    }
+
+    private func captureLastRegionInternal() async throws -> CaptureRecord {
+        let region = preferences.load().lastRegion
+        guard let regionInScreen = region else {
+            // No prior region — fall back to triggering the picker (same as captureRegion).
+            return try await captureRegionInternal()
+        }
+
+        let content = try await ScreenCaptureKitHelpers.shareableContent()
+        guard let display = displayContaining(point: CGPoint(x: regionInScreen.midX, y: regionInScreen.midY),
+                                              in: content) else {
+            throw CaptureError.regionOutsideDisplays
+        }
+        let displayFrame = displayGlobalFrame(display)
+        let displayLocal = CGRect(
+            x: regionInScreen.minX - displayFrame.minX,
+            y: regionInScreen.minY - displayFrame.minY,
+            width: regionInScreen.width,
+            height: regionInScreen.height
+        )
+
+        let filter = SCContentFilter(
+            display: display,
+            excludingApplications: try await ownApplications(),
+            exceptingWindows: []
+        )
+        let cfg = ScreenCaptureKitHelpers.configuration(for: display, regionInPoints: displayLocal)
+        let cg = try await ScreenCaptureKitHelpers.captureImage(filter: filter, configuration: cfg)
+        return try await persist(cg: cg, captureType: .lastRegion, sourceApp: nil)
     }
 
     // MARK: - Region
@@ -62,6 +93,12 @@ public final class CaptureEngineLive: CaptureEngine {
         )
         let cfg = ScreenCaptureKitHelpers.configuration(for: display, regionInPoints: displayLocal)
         let cg = try await ScreenCaptureKitHelpers.captureImage(filter: filter, configuration: cfg)
+
+        // Remember this region for "Capture Last Region".
+        var prefs = preferences.load()
+        prefs.lastRegion = regionInScreen
+        preferences.save(prefs)
+
         return try await persist(cg: cg, captureType: .region, sourceApp: nil)
     }
 
