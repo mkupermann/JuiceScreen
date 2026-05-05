@@ -21,6 +21,8 @@ CleanShot X is excellent but proprietary. JuiceScreen aims to be the lean open-s
 
 **v0.8 update — scroll capture (with honest limits).** Press `⌘⇧6` to capture a scrolling area: pick a region, scroll slowly, press Esc. JuiceScreen captures frames at 10fps, stitches them into a tall PNG, and opens it in the editor. The stitcher uses brute-force sum-of-squared-differences over a horizontal mid-strip — works cleanly on most native macOS apps and simple web pages (~70% of cases). It will visibly fail on the other ~30%: pages with sticky headers/footers, lazy-loaded content, or parallax effects produce ghosting or torn images. Tools that hide this limitation are tools that lie. We list it here.
 
+**v0.9 update — settings, PDF export, Sparkle wired.** The Settings panel is now real: General (start at login, save folder, default format, JPG quality), Capture (image scale, include cursor in stills), Recording (every toggle persists — fps, audio, cursor highlight, click pulse, keystrokes), Storage (usage stats, Open save folder, Empty trash now). The annotation editor's Save As dialog now offers PDF (rasterized — true vector PDF still v1.1). Sparkle 2.x is wired with `SUFeedURL` and an Info.plist `SUPublicEDKey` placeholder; the real EdDSA key, signed DMG, and the appcast at `https://mkupermann.github.io/JuiceScreen/appcast.xml` arrive in v1.0 (Plan 10). Until then the "Check for Updates Now" button will fail to find a feed — that is expected.
+
 See `docs/superpowers/specs/2026-05-04-juicescreen-design.md` for the full design.
 
 ## Installing
@@ -84,6 +86,7 @@ That is the entire network surface. No telemetry. No analytics. No crash reporte
 - macOS 15+ may re-prompt for Screen Recording permission weekly (Apple's behavior, not ours)
 - Scroll capture (v0.8): ~30% of complex web pages (sticky headers, lazy-load, parallax) produce ghosting or torn images. Native macOS apps and simple web pages stitch cleanly.
 - Scroll capture only handles vertical scroll in v0.8.
+- v0.9 ships with a placeholder Sparkle public key — the "Check for Updates" button will fail to find a feed until v1.0.0 publishes a signed appcast.
 
 Vector PDF export and additional limitations will be documented as those features ship.
 
@@ -93,4 +96,4 @@ MIT. See `LICENSE`.
 
 ## Roadmap
 
-Implementation proceeds via 10 plans, each shipping a working artifact. Foundation (this milestone) is Plan 1 of 10. Subsequent plans add image capture (Plan 2), annotation (Plan 3), library + storage (Plan 4), OCR + search (Plan 5), video recording (Plan 6), trim (Plan 7), scroll capture (Plan 8), settings + Sparkle (Plan 9), build pipeline + ship (Plan 10).
+Implementation proceeds via 10 plans, each shipping a working artifact. Foundation (this milestone) is Plan 1 of 10. Subsequent plans add image capture (Plan 2), annotation (Plan 3), library + storage (Plan 4), OCR + search (Plan 5), video recording (Plan 6), trim (Plan 7), scroll capture (Plan 8), settings + Sparkle + PDF (Plan 9, ✅ v0.9.0), build pipeline + ship (Plan 10).
