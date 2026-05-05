@@ -11,6 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let preferences = PreferencesStore()
     private let hotkeyService = HotkeyService()
 
+    private lazy var sparkleUpdater: SparkleUpdater = SparkleUpdater(preferences: preferences)
+
     private lazy var captureEngine: CaptureEngine = {
         let prefs = preferences.load()
         let saveDir = SaveDirectoryProvider(rootDirectory: prefs.saveDirectory)
@@ -149,6 +151,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         log.info("JuiceScreen launching")
 
         activationPolicy = ActivationPolicyController()
+
+        // Skip Sparkle bootstrap in unit/UI test runs — its scheduler blocks the
+        // test host on first appcast fetch.
+        let isTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || ProcessInfo.processInfo.environment["JUICESCREEN_UI_TEST_MODE"] != nil
+        if !isTesting {
+            _ = sparkleUpdater   // initializes Sparkle's scheduler
+        }
 
         // Background: GC trashed files older than 30 days
         Task.detached { [preferences] in
