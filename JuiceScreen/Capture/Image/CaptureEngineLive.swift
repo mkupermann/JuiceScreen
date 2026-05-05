@@ -37,15 +37,23 @@ public final class CaptureEngineLive: CaptureEngine {
 
     private func captureFullScreenInternal() async throws -> CaptureRecord {
         let content = try await ScreenCaptureKitHelpers.shareableContent()
-        guard let primary = content.displays.first else {
+        guard !content.displays.isEmpty else {
             throw CaptureError.noDisplaysAvailable
         }
+
+        let display: SCDisplay
+        if content.displays.count == 1 {
+            display = content.displays[0]
+        } else {
+            display = try await DisplayPickerWindow.pick(from: content.displays)
+        }
+
         let filter = SCContentFilter(
-            display: primary,
+            display: display,
             excludingApplications: try await ownApplications(),
             exceptingWindows: []
         )
-        let cfg = ScreenCaptureKitHelpers.configuration(for: primary)
+        let cfg = ScreenCaptureKitHelpers.configuration(for: display)
         let cg = try await ScreenCaptureKitHelpers.captureImage(filter: filter, configuration: cfg)
         return try await persist(cg: cg, captureType: .fullScreen, sourceApp: nil)
     }
