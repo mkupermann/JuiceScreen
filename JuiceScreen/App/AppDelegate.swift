@@ -22,6 +22,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         EditorWindowManager(preferences: preferences)
     }()
 
+    private lazy var trimEditorWindowManager: TrimEditorWindowManager = {
+        TrimEditorWindowManager()
+    }()
+
     private var _recordingSessionManager: RecordingSessionManager?
     private var recordingSessionManager: RecordingSessionManager {
         if let mgr = _recordingSessionManager { return mgr }
@@ -86,16 +90,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             thumbnailStore: thumbnailStore,
             onOpenCapture: { [weak self] row in
                 guard let self else { return }
-                let record = CaptureRecord(
-                    id: row.uuid,
-                    fileURL: URL(fileURLWithPath: row.filePath),
-                    captureType: .region,
-                    capturedAt: row.capturedAt,
-                    pixelWidth: row.pixelWidth,
-                    pixelHeight: row.pixelHeight,
-                    sourceApp: row.sourceApp
-                )
-                self.editorWindowManager.show(for: record)
+                switch row.mediaType {
+                case .video:
+                    self.trimEditorWindowManager.show(for: row)
+                case .image:
+                    let record = CaptureRecord(
+                        id: row.uuid,
+                        fileURL: URL(fileURLWithPath: row.filePath),
+                        captureType: .region,
+                        capturedAt: row.capturedAt,
+                        pixelWidth: row.pixelWidth,
+                        pixelHeight: row.pixelHeight,
+                        sourceApp: row.sourceApp
+                    )
+                    self.editorWindowManager.show(for: record)
+                }
             },
             onOpenSettings: { SettingsWindow.show() }
         )
