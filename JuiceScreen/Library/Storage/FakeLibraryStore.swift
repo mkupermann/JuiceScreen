@@ -82,6 +82,14 @@ public final class FakeLibraryStore: LibraryStore, @unchecked Sendable {
         ocrText[id] = text
     }
 
+    public func captureIDsWithoutOCR() async throws -> [(id: UUID, filePath: String)] {
+        lock.lock(); defer { lock.unlock() }
+        return rows.values
+            .filter { !$0.isDeleted && $0.mediaType == .image && ocrText[$0.uuid] == nil }
+            .sorted { $0.capturedAt > $1.capturedAt }
+            .map { ($0.uuid, $0.filePath) }
+    }
+
     public func search(query: SearchQuery) async throws -> [CaptureRow] {
         lock.lock()
         let snapshot = Array(rows.values)

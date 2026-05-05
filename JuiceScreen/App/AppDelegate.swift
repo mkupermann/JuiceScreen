@@ -102,6 +102,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        // Background: OCR backfill for captures that have no FTS5 entry yet
+        Task.detached { [libraryStore, ocrPipeline] in
+            let backfill = OCRBackfill(store: libraryStore, pipeline: ocrPipeline)
+            await backfill.run()
+        }
+
         let actions = MenuBarActions(
             captureRegion:     { [weak self] in self?.fireCapture(.region) },
             captureWindow:     { [weak self] in self?.fireCapture(.window) },

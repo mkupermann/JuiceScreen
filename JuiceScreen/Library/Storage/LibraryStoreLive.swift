@@ -181,6 +181,24 @@ public final class LibraryStoreLive: LibraryStore {
         }
     }
 
+    public func captureIDsWithoutOCR() async throws -> [(id: UUID, filePath: String)] {
+        try await databaseQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT captures.uuid, captures.file_path
+                FROM captures
+                LEFT JOIN captures_fts ON captures_fts.rowid = captures.rowid
+                WHERE captures.deleted_at IS NULL
+                  AND captures.media_type = 'image'
+                  AND captures_fts.rowid IS NULL
+                ORDER BY captures.captured_at DESC
+            """)
+            return rows.compactMap { row -> (UUID, String)? in
+                guard let id = UUID(uuidString: row["uuid"]) else { return nil }
+                return (id, row["file_path"])
+            }
+        }
+    }
+
     private static func toFTS5MatchExpression(_ text: String) -> String {
         let tokens = text.split(separator: " ", omittingEmptySubsequences: true)
         return tokens.map { "\"\($0)\"*" }.joined(separator: " ")

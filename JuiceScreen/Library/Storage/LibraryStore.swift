@@ -22,4 +22,7 @@ public protocol LibraryStore: Sendable {
     /// Returns live (non-deleted) captures matching the parsed query.
     /// Empty query returns all live captures ordered by `captured_at` descending.
     func search(query: SearchQuery) async throws -> [CaptureRow]
+
+    /// Returns (id, filePath) for live image captures that have no FTS5 entry yet.
+    func captureIDsWithoutOCR() async throws -> [(id: UUID, filePath: String)]
 }
