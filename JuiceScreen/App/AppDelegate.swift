@@ -10,6 +10,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let preferences = PreferencesStore()
     private let hotkeyService = HotkeyService()
 
+    private lazy var captureEngine: CaptureEngine = {
+        let prefs = preferences.load()
+        let saveDir = SaveDirectoryProvider(rootDirectory: prefs.saveDirectory)
+        let writer = CaptureRecordWriter(saveDirectory: saveDir)
+        return CaptureEngineLive(writer: writer, preferences: preferences)
+    }()
+
     private var menuBar: MenuBarController?
     private var firstRun: FirstRunCoordinator?
     private var activationPolicy: ActivationPolicyController?
@@ -17,15 +24,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("JuiceScreen launching")
 
-        // Activation policy controller (sets initial state to .accessory)
         activationPolicy = ActivationPolicyController()
 
-        // Menu bar
         let actions = MenuBarActions(
-            captureRegion:     { [weak self] in self?.todoLog("captureRegion") },
-            captureWindow:     { [weak self] in self?.todoLog("captureWindow") },
-            captureFullScreen: { [weak self] in self?.todoLog("captureFullScreen") },
-            captureLastRegion: { [weak self] in self?.todoLog("captureLastRegion") },
+            captureRegion:     { [weak self] in self?.fireCapture(.region) },
+            captureWindow:     { [weak self] in self?.fireCapture(.window) },
+            captureFullScreen: { [weak self] in self?.fireCapture(.fullScreen) },
+            captureLastRegion: { [weak self] in self?.fireCapture(.lastRegion) },
             recordScreen:      { [weak self] in self?.todoLog("recordScreen") },
             openLibrary:       { [weak self] in self?.todoLog("openLibrary") },
             openPreferences:   { SettingsWindow.show() },
@@ -34,10 +39,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let prefs = preferences.load()
         menuBar = MenuBarController(prefs: prefs, actions: actions)
 
-        // Hotkeys
         registerHotkeys(prefs: prefs, actions: actions)
 
-        // First-run wizard (no-op if already complete OR if running in UI test mode)
         if ProcessInfo.processInfo.environment["JUICESCREEN_UI_TEST_MODE"] == nil {
             let coordinator = FirstRunCoordinator(permissions: permissions, preferences: preferences)
             firstRun = coordinator
@@ -55,12 +58,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyService.register(prefs.openLibraryHotkey,       for: .openLibrary)       { actions.openLibrary() }
     }
 
+    private func fireCapture(_ type: CaptureType) {
+        let engine = captureEngine
+        Task { @MainActor in
+            do {
+                let record: CaptureRecord
+                switch type {
+                case .region:      record = try await engine.captureRegion()
+                case .window:      record = try await engine.captureWindow()
+                case .fullScreen:  record = try await engine.captureFullScreen()
+                case .lastRegion:  record = try await engine.captureLastRegion()
+                }
+                log.info("Captured \(String(describing: record.captureType)) → \(record.fileURL.path)")
+            } catch CaptureError.userCancelled {
+                log.info("Capture cancelled by user")
+            } catch CaptureError.missingScreenRecordingPermission {
+                log.error("Capture failed: Screen Recording permission missing")
+                permissions.openSettings(for: .screenRecording)
+            } catch {
+                log.error("Capture failed: \(String(describing: error))")
+            }
+        }
+    }
+
     private func todoLog(_ what: String) {
         log.info("TODO: \(what) action — implemented in a later plan")
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        // Menu bar app — don't quit when user closes the Settings window.
         false
     }
 }
