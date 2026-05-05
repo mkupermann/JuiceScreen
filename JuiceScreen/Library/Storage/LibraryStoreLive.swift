@@ -97,22 +97,93 @@ public final class LibraryStoreLive: LibraryStore {
 
     public func upsertOCRText(id: UUID, text: String) async throws {
         try await databaseQueue.write { db in
-            try db.execute(
-                sql: """
-                INSERT INTO captures_fts(uuid, ocr_text) VALUES (?, ?)
+            // Fetch the captures row's internal rowid so FTS rowid matches, enabling the JOIN.
+            guard let capturesRowid = try Int64.fetchOne(db,
+                sql: "SELECT rowid FROM captures WHERE uuid = ?",
+                arguments: [id.uuidString]) else { return }
+
+            // Maintain a side table to cache old OCR text so we can issue the FTS5 'delete'
+            // command (content='' tables require old values to de-index tokens correctly).
+            try db.execute(sql: """
+                CREATE TABLE IF NOT EXISTS captures_ocr_cache (
+                    uuid TEXT PRIMARY KEY,
+                    ocr_text TEXT NOT NULL
+                )
+            """)
+
+            // If an old entry exists, remove its tokens from the FTS index first.
+            if let oldText = try String.fetchOne(db,
+                sql: "SELECT ocr_text FROM captures_ocr_cache WHERE uuid = ?",
+                arguments: [id.uuidString]) {
+                try db.execute(sql: """
+                    INSERT INTO captures_fts(captures_fts, rowid, uuid, ocr_text, source_app)
+                    VALUES ('delete', ?, ?, ?, ?)
+                """, arguments: [capturesRowid, id.uuidString, oldText, ""])
+            }
+
+            // Insert new FTS entry with the captures rowid so JOIN works.
+            try db.execute(sql: """
+                INSERT INTO captures_fts (rowid, uuid, ocr_text, source_app) VALUES (?, ?, ?, ?)
+            """, arguments: [capturesRowid, id.uuidString, text, ""])
+
+            // Update the cache with the new text.
+            try db.execute(sql: """
+                INSERT INTO captures_ocr_cache (uuid, ocr_text) VALUES (?, ?)
                 ON CONFLICT(uuid) DO UPDATE SET ocr_text = excluded.ocr_text
-                """,
-                arguments: [id.uuidString, text]
-            )
+            """, arguments: [id.uuidString, text])
         }
     }
 
     public func search(query: SearchQuery) async throws -> [CaptureRow] {
         try await databaseQueue.read { db in
-            let rows = try Row.fetchAll(db,
-                sql: "SELECT * FROM captures WHERE deleted_at IS NULL ORDER BY captured_at DESC")
+            var conditions: [String] = ["captures.deleted_at IS NULL"]
+            var args: [DatabaseValueConvertible?] = []
+
+            if let app = query.sourceApp {
+                conditions.append("LOWER(captures.source_app) = LOWER(?)")
+                args.append(app)
+            }
+            if let after = query.after {
+                conditions.append("captures.captured_at >= ?")
+                args.append(Int(after.timeIntervalSince1970))
+            }
+            if let before = query.before {
+                conditions.append("captures.captured_at <= ?")
+                args.append(Int(before.timeIntervalSince1970))
+            }
+            if let type = query.mediaType {
+                conditions.append("captures.media_type = ?")
+                args.append(type.rawValue)
+            }
+
+            let sql: String
+            if query.text.isEmpty {
+                sql = """
+                    SELECT captures.*
+                    FROM captures
+                    WHERE \(conditions.joined(separator: " AND "))
+                    ORDER BY captures.captured_at DESC
+                """
+            } else {
+                conditions.append("captures_fts MATCH ?")
+                args.append(Self.toFTS5MatchExpression(query.text))
+                sql = """
+                    SELECT captures.*
+                    FROM captures
+                    JOIN captures_fts ON captures_fts.rowid = captures.rowid
+                    WHERE \(conditions.joined(separator: " AND "))
+                    ORDER BY rank, captures.captured_at DESC
+                """
+            }
+
+            let rows = try Row.fetchAll(db, sql: sql, arguments: StatementArguments(args))
             return rows.map(Self.makeRow(from:))
         }
+    }
+
+    private static func toFTS5MatchExpression(_ text: String) -> String {
+        let tokens = text.split(separator: " ", omittingEmptySubsequences: true)
+        return tokens.map { "\"\($0)\"*" }.joined(separator: " ")
     }
 
     // MARK: - Mapping
