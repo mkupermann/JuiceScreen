@@ -17,6 +17,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return CaptureEngineLive(writer: writer, preferences: preferences)
     }()
 
+    private lazy var editorWindowManager: EditorWindowManager = {
+        EditorWindowManager(preferences: preferences)
+    }()
+
     private var menuBar: MenuBarController?
     private var firstRun: FirstRunCoordinator?
     private var activationPolicy: ActivationPolicyController?
@@ -70,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case .lastRegion:  record = try await engine.captureLastRegion()
                 }
                 log.info("Captured \(String(describing: record.captureType)) → \(record.fileURL.path)")
+                editorWindowManager.show(for: record)
             } catch CaptureError.userCancelled {
                 log.info("Capture cancelled by user")
             } catch CaptureError.missingScreenRecordingPermission {
