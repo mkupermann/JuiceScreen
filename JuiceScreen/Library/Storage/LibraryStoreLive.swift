@@ -95,6 +95,26 @@ public final class LibraryStoreLive: LibraryStore {
         }
     }
 
+    public func upsertOCRText(id: UUID, text: String) async throws {
+        try await databaseQueue.write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO captures_fts(uuid, ocr_text) VALUES (?, ?)
+                ON CONFLICT(uuid) DO UPDATE SET ocr_text = excluded.ocr_text
+                """,
+                arguments: [id.uuidString, text]
+            )
+        }
+    }
+
+    public func search(query: SearchQuery) async throws -> [CaptureRow] {
+        try await databaseQueue.read { db in
+            let rows = try Row.fetchAll(db,
+                sql: "SELECT * FROM captures WHERE deleted_at IS NULL ORDER BY captured_at DESC")
+            return rows.map(Self.makeRow(from:))
+        }
+    }
+
     // MARK: - Mapping
 
     private static func makeRow(from row: Row) -> CaptureRow {

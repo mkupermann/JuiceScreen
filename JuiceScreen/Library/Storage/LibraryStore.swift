@@ -14,4 +14,12 @@ public protocol LibraryStore: Sendable {
     func permanentlyDelete(id: UUID) async throws
     func updateThumbnailPath(id: UUID, thumbnailPath: String) async throws
     func updateAnnotationPath(id: UUID, annotationPath: String?) async throws
+
+    /// Writes the concatenated OCR text for a capture into the FTS5 index.
+    /// Idempotent — replaces any existing entry for the same id.
+    func upsertOCRText(id: UUID, text: String) async throws
+
+    /// Returns live (non-deleted) captures matching the parsed query.
+    /// Empty query returns all live captures ordered by `captured_at` descending.
+    func search(query: SearchQuery) async throws -> [CaptureRow]
 }

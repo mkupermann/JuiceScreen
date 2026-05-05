@@ -130,4 +130,59 @@ struct FakeLibraryStoreTests {
         let result = try await store.fetch(id: UUID())
         #expect(result == nil)
     }
+
+    @Test("upsertOCRText stores text per id; search returns rows whose ocr text matches")
+    func upsertAndSearch() async throws {
+        let store = FakeLibraryStore()
+        let row = makeRow()
+        try await store.insert(row)
+        try await store.upsertOCRText(id: row.uuid, text: "Hello AWS error log")
+
+        var q = SearchQuery()
+        q.text = "AWS"
+        let hits = try await store.search(query: q)
+        #expect(hits.count == 1)
+        #expect(hits.first!.uuid == row.uuid)
+    }
+
+    @Test("search filters: from + after + type combine")
+    func combinedSearch() async throws {
+        let store = FakeLibraryStore()
+        let cal = Calendar(identifier: .gregorian)
+
+        let safariImage = makeRow(daysAgo: 1, mediaType: .image)
+        try await store.insert(CaptureRow(
+            uuid: safariImage.uuid, filePath: safariImage.filePath, annotationPath: nil,
+            thumbnailPath: safariImage.thumbnailPath, mediaType: .image,
+            capturedAt: safariImage.capturedAt, pixelWidth: 100, pixelHeight: 100,
+            durationMs: nil, fileSizeBytes: 100, sourceApp: "Safari", deletedAt: nil))
+
+        let chromeImage = makeRow(daysAgo: 1)
+        try await store.insert(CaptureRow(
+            uuid: chromeImage.uuid, filePath: chromeImage.filePath, annotationPath: nil,
+            thumbnailPath: chromeImage.thumbnailPath, mediaType: .image,
+            capturedAt: chromeImage.capturedAt, pixelWidth: 100, pixelHeight: 100,
+            durationMs: nil, fileSizeBytes: 100, sourceApp: "Chrome", deletedAt: nil))
+
+        var q = SearchQuery()
+        q.sourceApp = "Safari"
+        q.after = cal.date(byAdding: .day, value: -2, to: Date())
+        q.mediaType = .image
+
+        let hits = try await store.search(query: q)
+        #expect(hits.count == 1)
+        #expect(hits.first!.uuid == safariImage.uuid)
+    }
+
+    @Test("Empty query returns all live captures (newest first)")
+    func emptyQueryReturnsAll() async throws {
+        let store = FakeLibraryStore()
+        let oldest = makeRow(daysAgo: 5)
+        let newest = makeRow(daysAgo: 0)
+        try await store.insert(oldest)
+        try await store.insert(newest)
+
+        let hits = try await store.search(query: SearchQuery())
+        #expect(hits.map { $0.uuid } == [newest.uuid, oldest.uuid])
+    }
 }
