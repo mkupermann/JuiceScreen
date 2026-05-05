@@ -26,6 +26,9 @@ packages:
   GRDB:
     url: https://github.com/groue/GRDB.swift.git
     from: "6.29.0"
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle.git
+    from: "2.6.0"
 
 targets:
   JuiceScreen:
@@ -50,6 +53,9 @@ targets:
         NSHumanReadableCopyright: "© 2026 Michael Kupermann. MIT licensed."
         NSCameraUsageDescription: "JuiceScreen does not use the camera."
         NSMicrophoneUsageDescription: "JuiceScreen needs microphone access only when you enable mic recording during a screen recording. It is never accessed otherwise."
+        SUFeedURL: "https://mkupermann.github.io/JuiceScreen/appcast.xml"
+        SUPublicEDKey: "PLACEHOLDER_GENERATE_IN_PLAN_10"
+        SUEnableAutomaticChecks: true
     entitlements:
       path: JuiceScreen/Resources/JuiceScreen.entitlements
       properties:
@@ -58,6 +64,7 @@ targets:
         com.apple.security.device.camera: false
     dependencies:
       - package: GRDB
+      - package: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bks-lab.juicescreen
