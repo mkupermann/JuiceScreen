@@ -34,4 +34,15 @@ public enum ExportService {
             throw ExportError.writeFailed("\(error)")
         }
     }
+
+    /// Maps a file extension (lowercased or not, with or without leading dot) to the matching Format.
+    /// Defaults to `.png` if the extension is unknown.
+    public static func formatForExtension(_ ext: String) -> Format {
+        let normalized = ext.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "."))
+        switch normalized {
+        case "jpg", "jpeg": return .jpg
+        case "pdf":         return .pdf
+        default:            return .png
+        }
+    }
 }

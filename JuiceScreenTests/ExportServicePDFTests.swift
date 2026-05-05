@@ -50,3 +50,27 @@ struct ExportServicePDFTests {
         #expect(ExportService.Format.allCases.contains(.pdf))
     }
 }
+
+@MainActor
+@Suite("QuickActions extension routing")
+struct QuickActionsFormatRoutingTests {
+
+    @Test("formatForExtension picks .pdf for .pdf URLs")
+    func pdfRoutes() {
+        #expect(ExportService.formatForExtension("pdf") == .pdf)
+    }
+
+    @Test("formatForExtension picks .jpg for jpg/jpeg")
+    func jpgRoutes() {
+        #expect(ExportService.formatForExtension("jpg") == .jpg)
+        #expect(ExportService.formatForExtension("jpeg") == .jpg)
+        #expect(ExportService.formatForExtension("JPG") == .jpg)
+    }
+
+    @Test("formatForExtension defaults to .png for unknown")
+    func defaultsToPNG() {
+        #expect(ExportService.formatForExtension("png") == .png)
+        #expect(ExportService.formatForExtension("") == .png)
+        #expect(ExportService.formatForExtension("tiff") == .png)
+    }
+}

@@ -31,7 +31,7 @@ public final class QuickActions {
     /// Saves to the original capture's location, replacing the file in place.
     public func save() {
         let url = state.captureRecord.fileURL
-        let format: ExportService.Format = url.pathExtension.lowercased() == "jpg" || url.pathExtension.lowercased() == "jpeg" ? .jpg : .png
+        let format = ExportService.formatForExtension(url.pathExtension)
         let quality = preferences.load().jpegQuality
         do {
             try ExportService.export(document: state.document, format: format, jpegQuality: quality, to: url)
@@ -46,12 +46,12 @@ public final class QuickActions {
     /// Opens an `NSSavePanel` and writes to the chosen location.
     public func saveAs() {
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [.png, .jpeg]
+        panel.allowedContentTypes = [.png, .jpeg, .pdf]
         panel.nameFieldStringValue = state.captureRecord.fileURL.deletingPathExtension().lastPathComponent
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        let format: ExportService.Format = url.pathExtension.lowercased() == "jpg" || url.pathExtension.lowercased() == "jpeg" ? .jpg : .png
+        let format = ExportService.formatForExtension(url.pathExtension)
         let quality = preferences.load().jpegQuality
         do {
             try ExportService.export(document: state.document, format: format, jpegQuality: quality, to: url)
