@@ -38,9 +38,17 @@ struct LibraryView: View {
     private var searchBar: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search by OCR text (Plan 5)", text: $vm.searchText)
+            TextField("Search OCR text (e.g. \"aws error from:Safari after:2026-04-15\")", text: $vm.searchText)
                 .textFieldStyle(.plain)
-                .disabled(true)
+            if !vm.searchText.isEmpty {
+                Button {
+                    vm.searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Clear search")
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
