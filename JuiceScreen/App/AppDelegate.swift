@@ -42,6 +42,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         CaptureLibraryRecorder(store: libraryStore, thumbnailStore: thumbnailStore)
     }()
 
+    private lazy var libraryWindowManager: LibraryWindowManager = {
+        LibraryWindowManager(
+            store: libraryStore,
+            thumbnailStore: thumbnailStore,
+            onOpenCapture: { [weak self] row in
+                guard let self else { return }
+                let record = CaptureRecord(
+                    id: row.uuid,
+                    fileURL: URL(fileURLWithPath: row.filePath),
+                    captureType: .region,
+                    capturedAt: row.capturedAt,
+                    pixelWidth: row.pixelWidth,
+                    pixelHeight: row.pixelHeight,
+                    sourceApp: row.sourceApp
+                )
+                self.editorWindowManager.show(for: record)
+            },
+            onOpenSettings: { SettingsWindow.show() }
+        )
+    }()
+
     private var menuBar: MenuBarController?
     private var firstRun: FirstRunCoordinator?
     private var activationPolicy: ActivationPolicyController?
@@ -71,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             captureFullScreen: { [weak self] in self?.fireCapture(.fullScreen) },
             captureLastRegion: { [weak self] in self?.fireCapture(.lastRegion) },
             recordScreen:      { [weak self] in self?.todoLog("recordScreen") },
-            openLibrary:       { [weak self] in self?.todoLog("openLibrary") },
+            openLibrary:       { [weak self] in self?.libraryWindowManager.show() },
             openPreferences:   { SettingsWindow.show() },
             quit:              { NSApp.terminate(nil) }
         )
