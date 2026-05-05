@@ -16,6 +16,7 @@ public final class PreferencesStore: @unchecked Sendable {
         static let recordScreenHotkey = "recordScreenHotkey"
         static let openLibraryHotkey = "openLibraryHotkey"
         static let hotkeysPaused = "hotkeysPaused"
+        static let lastRegion = "lastRegion"
     }
 
     private let defaults: UserDefaults
@@ -38,7 +39,8 @@ public final class PreferencesStore: @unchecked Sendable {
             captureLastRegionHotkey: loadHotkey(Key.captureLastRegionHotkey) ?? d.captureLastRegionHotkey,
             recordScreenHotkey:      loadHotkey(Key.recordScreenHotkey)      ?? d.recordScreenHotkey,
             openLibraryHotkey:       loadHotkey(Key.openLibraryHotkey)       ?? d.openLibraryHotkey,
-            hotkeysPaused:           defaults.object(forKey: Key.hotkeysPaused) as? Bool ?? d.hotkeysPaused
+            hotkeysPaused:           defaults.object(forKey: Key.hotkeysPaused) as? Bool ?? d.hotkeysPaused,
+            lastRegion:              loadRect(Key.lastRegion)
         )
     }
 
@@ -55,6 +57,7 @@ public final class PreferencesStore: @unchecked Sendable {
         saveHotkey(prefs.recordScreenHotkey,      key: Key.recordScreenHotkey)
         saveHotkey(prefs.openLibraryHotkey,       key: Key.openLibraryHotkey)
         defaults.set(prefs.hotkeysPaused, forKey: Key.hotkeysPaused)
+        saveRect(prefs.lastRegion, key: Key.lastRegion)
     }
 
     // MARK: - Helpers
@@ -80,5 +83,25 @@ public final class PreferencesStore: @unchecked Sendable {
     private func loadEnum(_ key: String) -> StillImageFormat? {
         guard let raw = defaults.string(forKey: key) else { return nil }
         return StillImageFormat(rawValue: raw)
+    }
+
+    private func loadRect(_ key: String) -> CGRect? {
+        guard let dict = defaults.dictionary(forKey: key) as? [String: Double] else { return nil }
+        guard let x = dict["x"], let y = dict["y"],
+              let w = dict["w"], let h = dict["h"] else { return nil }
+        return CGRect(x: x, y: y, width: w, height: h)
+    }
+
+    private func saveRect(_ rect: CGRect?, key: String) {
+        guard let rect else {
+            defaults.removeObject(forKey: key)
+            return
+        }
+        defaults.set([
+            "x": Double(rect.origin.x),
+            "y": Double(rect.origin.y),
+            "w": Double(rect.size.width),
+            "h": Double(rect.size.height)
+        ], forKey: key)
     }
 }

@@ -57,4 +57,17 @@ struct PreferencesStoreTests {
         let reloaded = store.load()
         #expect(reloaded.saveDirectory.path == "/tmp/jstest")
     }
+
+    @Test("lastRegion round-trips")
+    func lastRegionRoundTrip() {
+        let (store, _) = makeEphemeralStore()
+        var prefs = store.load()
+        #expect(prefs.lastRegion == nil)
+
+        prefs.lastRegion = CGRect(x: 100, y: 200, width: 300, height: 400)
+        store.save(prefs)
+
+        let reloaded = store.load()
+        #expect(reloaded.lastRegion == CGRect(x: 100, y: 200, width: 300, height: 400))
+    }
 }

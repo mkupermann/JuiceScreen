@@ -24,6 +24,7 @@ public struct Preferences: Equatable, Sendable {
     public var openLibraryHotkey: Hotkey
 
     public var hotkeysPaused: Bool
+    public var lastRegion: CGRect?
 
     public static let defaults: Preferences = {
         let pictures = FileManager.default.urls(for: .picturesDirectory, in: .userDomainMask).first
@@ -43,7 +44,8 @@ public struct Preferences: Equatable, Sendable {
             captureLastRegionHotkey: Hotkey(keyCode: 15, modifiers: [.command, .shift]),
             recordScreenHotkey:      Hotkey(keyCode: 23, modifiers: [.command, .shift]),
             openLibraryHotkey:       Hotkey(keyCode: 37, modifiers: [.command, .shift]),
-            hotkeysPaused: false
+            hotkeysPaused: false,
+            lastRegion: nil
         )
     }()
 }
