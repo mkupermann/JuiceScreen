@@ -19,6 +19,8 @@ CleanShot X is excellent but proprietary. JuiceScreen aims to be the lean open-s
 
 **v0.7 update — trim post-record.** Double-click a video tile in the library to open the Trim Editor: AVPlayer-backed preview, custom scrubber with two draggable handles for the start and end of the keep-range, and Save Trim / Save Trim As buttons. AVAssetExportSession writes a new MP4 H.264 with the chosen range at highest quality. The library now stores per-video duration (`durationMs`), shown in the inspector.
 
+**v0.8 update — scroll capture (with honest limits).** Press `⌘⇧6` to capture a scrolling area: pick a region, scroll slowly, press Esc. JuiceScreen captures frames at 10fps, stitches them into a tall PNG, and opens it in the editor. The stitcher uses brute-force sum-of-squared-differences over a horizontal mid-strip — works cleanly on most native macOS apps and simple web pages (~70% of cases). It will visibly fail on the other ~30%: pages with sticky headers/footers, lazy-loaded content, or parallax effects produce ghosting or torn images. Tools that hide this limitation are tools that lie. We list it here.
+
 See `docs/superpowers/specs/2026-05-04-juicescreen-design.md` for the full design.
 
 ## Installing
@@ -80,8 +82,10 @@ That is the entire network surface. No telemetry. No analytics. No crash reporte
 - No support for macOS < 14
 - No iCloud sync of library (by design — local-only)
 - macOS 15+ may re-prompt for Screen Recording permission weekly (Apple's behavior, not ours)
+- Scroll capture (v0.8): ~30% of complex web pages (sticky headers, lazy-load, parallax) produce ghosting or torn images. Native macOS apps and simple web pages stitch cleanly.
+- Scroll capture only handles vertical scroll in v0.8.
 
-Scroll capture, vector PDF export, and additional limitations will be documented as those features ship.
+Vector PDF export and additional limitations will be documented as those features ship.
 
 ## License
 
