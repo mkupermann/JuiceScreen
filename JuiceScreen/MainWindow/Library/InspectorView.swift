@@ -42,6 +42,9 @@ struct InspectorView: View {
                 metaRow("File", value: ByteCountFormatter.string(fromByteCount: row.fileSizeBytes, countStyle: .file))
                 if let app = row.sourceApp { metaRow("Source", value: app) }
                 metaRow("Type", value: row.mediaType == .video ? "Video" : "Image")
+                if let ms = row.durationMs {
+                    metaRow("Duration", value: formattedDuration(ms))
+                }
             }
 
             Divider()
@@ -123,5 +126,16 @@ struct InspectorView: View {
             Text(value).font(.caption).foregroundStyle(.primary)
             Spacer()
         }
+    }
+
+    private func formattedDuration(_ ms: Int) -> String {
+        let totalSeconds = ms / 1000
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        let millis = ms % 1000
+        if minutes > 0 {
+            return String(format: "%dm %02d.%03ds", minutes, seconds, millis)
+        }
+        return String(format: "%d.%03ds", seconds, millis)
     }
 }
