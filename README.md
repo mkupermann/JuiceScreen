@@ -17,6 +17,8 @@ CleanShot X is excellent but proprietary. JuiceScreen aims to be the lean open-s
 
 **v0.6 update — local video recording.** Press `⌘⇧5` to start a full-screen recording. ScreenCaptureKit captures the primary display at 60fps, system audio mixes in by default, and a yellow ring follows the cursor in every frame. Optional microphone capture and Input-Monitoring-gated overlays (click pulse, last-3-keystrokes chip in the corner) are available in Settings → Recording. A small floating control bar shows duration + a stop button. MP4 H.264 files land at `~/Pictures/JuiceScreen/<date>/JuiceScreen_<timestamp>.mp4` and appear as `.video` rows in the library. Trim handles + post-record editing arrive in v0.7.
 
+**v0.7 update — trim post-record.** Double-click a video tile in the library to open the Trim Editor: AVPlayer-backed preview, custom scrubber with two draggable handles for the start and end of the keep-range, and Save Trim / Save Trim As buttons. AVAssetExportSession writes a new MP4 H.264 with the chosen range at highest quality. The library now stores per-video duration (`durationMs`), shown in the inspector.
+
 See `docs/superpowers/specs/2026-05-04-juicescreen-design.md` for the full design.
 
 ## Installing
