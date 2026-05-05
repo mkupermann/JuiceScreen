@@ -1,4 +1,5 @@
 import AppKit
+import GRDB
 import SwiftUI
 
 @MainActor
@@ -21,6 +22,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         EditorWindowManager(preferences: preferences)
     }()
 
+    private lazy var libraryPaths: LibraryPaths = LibraryPaths()
+
+    private lazy var libraryStore: LibraryStore = {
+        do {
+            let dbURL = try libraryPaths.databaseURL()
+            let queue = try DatabaseQueue(path: dbURL.path)
+            try LibrarySchema.migrator().migrate(queue)
+            return LibraryStoreLive(databaseQueue: queue)
+        } catch {
+            log.error("Failed to open library database: \(String(describing: error))")
+            return FakeLibraryStore()
+        }
+    }()
+
+    private lazy var thumbnailStore: ThumbnailStore = ThumbnailStore(paths: libraryPaths)
+
+    private lazy var captureLibraryRecorder: CaptureLibraryRecorder = {
+        CaptureLibraryRecorder(store: libraryStore, thumbnailStore: thumbnailStore)
+    }()
+
     private var menuBar: MenuBarController?
     private var firstRun: FirstRunCoordinator?
     private var activationPolicy: ActivationPolicyController?
@@ -29,6 +50,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         log.info("JuiceScreen launching")
 
         activationPolicy = ActivationPolicyController()
+
+        // Background: GC trashed files older than 30 days
+        Task.detached { [preferences] in
+            let saveDir = preferences.load().saveDirectory
+            let gc = TrashGC(captureRoot: saveDir)
+            do {
+                let removed = try await gc.sweep()
+                if removed > 0 {
+                    AppLog.logger(category: "App").info("TrashGC removed \(removed) files older than 30 days")
+                }
+            } catch {
+                AppLog.logger(category: "App").error("TrashGC failed: \(String(describing: error))")
+            }
+        }
 
         let actions = MenuBarActions(
             captureRegion:     { [weak self] in self?.fireCapture(.region) },
@@ -75,6 +110,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 log.info("Captured \(String(describing: record.captureType)) → \(record.fileURL.path)")
                 editorWindowManager.show(for: record)
+                Task { [captureLibraryRecorder] in
+                    do {
+                        try await captureLibraryRecorder.record(record)
+                    } catch {
+                        AppLog.logger(category: "App").error("Library recording failed: \(String(describing: error))")
+                    }
+                }
             } catch CaptureError.userCancelled {
                 log.info("Capture cancelled by user")
             } catch CaptureError.missingScreenRecordingPermission {
