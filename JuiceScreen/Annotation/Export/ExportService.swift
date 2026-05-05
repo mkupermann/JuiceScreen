@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import PDFKit
 
 @MainActor
 public enum ExportService {
@@ -7,6 +8,7 @@ public enum ExportService {
     public enum Format: String, Sendable, CaseIterable {
         case png
         case jpg
+        case pdf
     }
 
     public enum ExportError: Error, Equatable {
@@ -23,6 +25,8 @@ public enum ExportService {
             data = try PNGEncoder.encode(flattened)
         case .jpg:
             data = try JPGEncoder.encode(flattened, quality: jpegQuality)
+        case .pdf:
+            data = try PDFEncoder.encode(flattened)
         }
         do {
             try data.write(to: destination, options: .atomic)
