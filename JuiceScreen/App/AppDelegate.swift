@@ -253,7 +253,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             do {
                 menuBar?.setRecordingIndicator(true)
-                try await recordingSessionManager.start(mode: mode, options: .defaults, outputURL: outputURL)
+                try await recordingSessionManager.start(mode: mode, options: prefs.recordingOptions, outputURL: outputURL)
             } catch {
                 AppLog.logger(category: "App").error("Recording failed to start: \(String(describing: error))")
                 menuBar?.setRecordingIndicator(false)
