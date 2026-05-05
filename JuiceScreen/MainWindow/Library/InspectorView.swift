@@ -7,6 +7,22 @@ struct InspectorView: View {
     @Bindable var vm: LibraryViewModel
     let onOpen: (CaptureRow) -> Void
 
+    @State private var ocrText: String? = nil
+
+    private func loadOCR() async {
+        let paths = LibraryPaths()
+        let store = OCRSidecarStore(paths: paths)
+        do {
+            if let result = try store.read(for: row.uuid) {
+                ocrText = result.fullText
+            } else {
+                ocrText = nil
+            }
+        } catch {
+            ocrText = nil
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Thumbnail
@@ -53,13 +69,38 @@ struct InspectorView: View {
 
             Divider()
 
-            // OCR placeholder (Plan 5)
             VStack(alignment: .leading, spacing: 4) {
                 Text("OCR Text").font(.caption).foregroundStyle(.secondary)
-                Text("Extracted text will appear here in v0.5 (Plan 5).")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
-                    .italic()
+
+                if let text = ocrText, !text.isEmpty {
+                    ScrollView {
+                        Text(text)
+                            .font(.system(size: 11))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                    .frame(maxHeight: 160)
+
+                    Button {
+                        let pb = NSPasteboard.general
+                        pb.clearContents()
+                        pb.setString(text, forType: .string)
+                    } label: {
+                        Label("Copy text", systemImage: "doc.on.doc")
+                    }
+                    .controlSize(.small)
+                } else if ocrText == nil {
+                    Text("OCR pending…")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary).italic()
+                } else {
+                    Text("No text recognised.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary).italic()
+                }
+            }
+            .task(id: row.uuid) {
+                await loadOCR()
             }
 
             Spacer()
