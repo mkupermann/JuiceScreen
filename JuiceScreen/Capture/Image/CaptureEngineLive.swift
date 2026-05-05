@@ -8,16 +8,17 @@ public final class CaptureEngineLive: CaptureEngine {
 
     private let writer: CaptureRecordWriter
     private let windowPicker: WindowPickerService
+    private let regionPicker: RegionPickerController
     private let log = AppLog.logger(category: "CaptureEngineLive")
 
     public init(writer: CaptureRecordWriter) {
         self.writer = writer
         self.windowPicker = WindowPickerService()
+        self.regionPicker = RegionPickerController()
     }
 
     nonisolated public func captureRegion() async throws -> CaptureRecord {
-        // Implemented in Task 15
-        throw CaptureError.captureFailed(underlying: "captureRegion not yet implemented")
+        try await captureRegionInternal()
     }
 
     nonisolated public func captureWindow() async throws -> CaptureRecord {
@@ -31,6 +32,55 @@ public final class CaptureEngineLive: CaptureEngine {
     nonisolated public func captureLastRegion() async throws -> CaptureRecord {
         // Implemented in Task 17
         throw CaptureError.captureFailed(underlying: "captureLastRegion not yet implemented")
+    }
+
+    // MARK: - Region
+
+    private func captureRegionInternal() async throws -> CaptureRecord {
+        let regionInScreen = try await regionPicker.pickRegion()
+
+        // Find which display contains the selection's center.
+        let content = try await ScreenCaptureKitHelpers.shareableContent()
+        guard let display = displayContaining(point: CGPoint(x: regionInScreen.midX, y: regionInScreen.midY),
+                                              in: content) else {
+            throw CaptureError.regionOutsideDisplays
+        }
+
+        // Convert global-screen coordinates to display-local coordinates for sourceRect.
+        let displayFrame = displayGlobalFrame(display)
+        let displayLocal = CGRect(
+            x: regionInScreen.minX - displayFrame.minX,
+            y: regionInScreen.minY - displayFrame.minY,
+            width: regionInScreen.width,
+            height: regionInScreen.height
+        )
+
+        let filter = SCContentFilter(
+            display: display,
+            excludingApplications: try await ownApplications(),
+            exceptingWindows: []
+        )
+        let cfg = ScreenCaptureKitHelpers.configuration(for: display, regionInPoints: displayLocal)
+        let cg = try await ScreenCaptureKitHelpers.captureImage(filter: filter, configuration: cfg)
+        return try await persist(cg: cg, captureType: .region, sourceApp: nil)
+    }
+
+    /// Returns the SCDisplay whose global frame contains `point`, or nil.
+    private func displayContaining(point: CGPoint, in content: SCShareableContent) -> SCDisplay? {
+        return content.displays.first { display in
+            displayGlobalFrame(display).contains(point)
+        }
+    }
+
+    /// SCDisplay frames are in display-local coordinates; combine with `frame` from the matching NSScreen
+    /// to get global screen coordinates. We match by `displayID` (CGDirectDisplayID).
+    private func displayGlobalFrame(_ display: SCDisplay) -> CGRect {
+        if let nsScreen = NSScreen.screens.first(where: { screen in
+            (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) == display.displayID
+        }) {
+            return nsScreen.frame
+        }
+        return CGRect(x: 0, y: 0, width: display.width, height: display.height)
     }
 
     // MARK: - Full screen
