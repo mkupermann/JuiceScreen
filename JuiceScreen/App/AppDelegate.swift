@@ -38,8 +38,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private lazy var thumbnailStore: ThumbnailStore = ThumbnailStore(paths: libraryPaths)
 
+    private lazy var ocrService: OCRService = OCRServiceLive()
+
+    private lazy var ocrSidecarStore: OCRSidecarStore = OCRSidecarStore(paths: libraryPaths)
+
+    private lazy var ocrPipeline: OCRPipeline = {
+        OCRPipeline(
+            ocrService: ocrService,
+            sidecarStore: ocrSidecarStore,
+            libraryStore: libraryStore
+        )
+    }()
+
     private lazy var captureLibraryRecorder: CaptureLibraryRecorder = {
-        CaptureLibraryRecorder(store: libraryStore, thumbnailStore: thumbnailStore)
+        CaptureLibraryRecorder(
+            store: libraryStore,
+            thumbnailStore: thumbnailStore,
+            ocrPipeline: ocrPipeline
+        )
     }()
 
     private lazy var libraryWindowManager: LibraryWindowManager = {
