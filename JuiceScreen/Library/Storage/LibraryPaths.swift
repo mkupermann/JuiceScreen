@@ -43,4 +43,14 @@ public struct LibraryPaths: Sendable {
         try thumbnailsDirectory()
             .appendingPathComponent("\(id.uuidString).jpg", isDirectory: false)
     }
+
+    public func ocrDirectory() throws -> URL {
+        let dir = try appSupportDirectory().appendingPathComponent("ocr", isDirectory: true)
+        try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    public func ocrSidecarURL(for id: UUID) throws -> URL {
+        try ocrDirectory().appendingPathComponent("\(id.uuidString).json", isDirectory: false)
+    }
 }
