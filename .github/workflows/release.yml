@@ -19,7 +19,14 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_16.app
 
       - name: Install tooling
-        run: brew install xcodegen create-dmg xcbeautify
+        run: |
+          brew bundle --file=Brewfile
+          # Log resolved versions so drift in unpinned brew formulas is visible
+          # in the workflow output and can be diff'd against past runs.
+          echo "Resolved tool versions:"
+          xcodegen --version || xcodegen version || true
+          create-dmg --version | head -1 || true
+          xcbeautify --version || true
 
       - name: Verify VERSION matches tag
         run: |
@@ -30,6 +37,16 @@ jobs:
             exit 1
           fi
           echo "✅ Version match: $FILE_VERSION"
+
+      - name: Guard against placeholder Sparkle public key
+        run: |
+          if grep -q 'PLACEHOLDER_GENERATE_IN_PLAN_10' JuiceScreen/Resources/Info.plist; then
+            echo "❌ SUPublicEDKey is still the literal placeholder."
+            echo "   Generate the EdDSA keypair (see docs/RELEASE.md) and replace"
+            echo "   the placeholder in Info.plist + project.yml before tagging."
+            exit 1
+          fi
+          echo "✅ SUPublicEDKey looks like a real key (not the placeholder)"
 
       - name: Build app
         run: bash scripts/build-release.sh
