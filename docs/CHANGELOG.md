@@ -2,6 +2,12 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.0.4] — 2026-05-06
+
+### Fixed
+- Region picker only worked on one display in multi-monitor setups. macOS does not reliably draw or accept events in a single window that spans multiple displays — the overlay was being anchored to one screen and the others were dark. `RegionPickerController` now creates one overlay per `NSScreen`, shares a single selection state in global screen coordinates, and renders per-screen-local coords. Drag from any display, and the selection follows the cursor across display boundaries.
+- Settings window still opened blank on some macOS configurations even after the v1.0.3 `NavigationSplitView` rewrite. Replaced with a plain `HStack` (List-style sidebar on the left, selected tab's body on the right) — avoids both `TabView` and `NavigationSplitView` and renders consistently.
+
 ## [1.0.3] — 2026-05-06
 
 ### Fixed
