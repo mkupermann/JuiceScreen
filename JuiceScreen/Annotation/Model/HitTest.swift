@@ -14,7 +14,12 @@ public enum HitTest {
             return ellipseContains(rect: p.rect, point: point)
 
         case .blur(let p, _):
-            return p.rect.contains(point)
+            // Gaussian blur previews have visible soft edges that bleed slightly
+            // beyond the strict rect. Expand the hit region by `intensity` so the
+            // user can click on the visible halo and still select the layer.
+            // Pixelate is sharp-edged, so the strict rect is correct there.
+            let pad: CGFloat = p.style == .gaussian ? max(p.intensity, 8) : 0
+            return p.rect.insetBy(dx: -pad, dy: -pad).contains(point)
 
         case .text(let p, _):
             return p.boundingRect().contains(point)

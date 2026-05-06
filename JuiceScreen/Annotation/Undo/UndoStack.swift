@@ -21,6 +21,20 @@ public struct UndoStack<T> {
         future.removeAll()
     }
 
+    /// Replace `current` without modifying history. For drag sessions: the gesture
+    /// keeps mutating the document during onChanged, then commits one undo entry
+    /// via `commitChange(from:)` at onEnded.
+    public mutating func setCurrent(_ next: T) {
+        current = next
+    }
+
+    /// Push `original` onto `past` so the next `undo` restores the pre-drag state,
+    /// and clear the redo tail. Pair with `setCurrent` calls from a drag session.
+    public mutating func commitChange(from original: T) {
+        past.append(original)
+        future.removeAll()
+    }
+
     public mutating func undo() {
         guard let prev = past.popLast() else { return }
         future.append(current)

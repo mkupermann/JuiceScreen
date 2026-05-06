@@ -86,11 +86,16 @@ struct EditorToolbar: View {
                          disabled: !state.canUndo) {
                 state.undo()
             }
+            .keyboardShortcut("z", modifiers: .command)
+
             ActionButton(systemImage: "arrow.uturn.forward", help: "Redo (⌘⇧Z)",
                          disabled: !state.canRedo) {
                 state.redo()
             }
+            .keyboardShortcut("z", modifiers: [.command, .shift])
+
             Divider().frame(height: 22).padding(.horizontal, 4)
+
             ActionButton(systemImage: "doc.on.doc", help: "Copy to clipboard (⌘C)") {
                 actions.copyToClipboard()
             }

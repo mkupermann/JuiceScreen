@@ -71,13 +71,16 @@ struct CanvasGestures: View {
     private func handleEnded(_ value: DragGesture.Value) {
         switch state.currentTool {
         case .arrow, .doubleArrow, .line, .rectangle, .ellipse, .blur:
-            // Layer was added incrementally during onChanged; nothing more to do
+            // Drag-to-create is one undo step. Commit the live edits made during
+            // onChanged as a single entry on the undo stack.
+            state.commitDragSession()
             inProgressLayerID = nil
         case .pen, .highlighter:
+            state.commitDragSession()
             inProgressLayerID = nil
             freehandPoints = []
         case .crop:
-            // Crop sets canvasCrop instead of adding a layer
+            // Crop sets canvasCrop instead of adding a layer.
             let rect = normalizedRect(from: value.startLocation, to: value.location)
             state.setCrop(rect.width >= 4 && rect.height >= 4 ? rect : nil)
         case .select:
@@ -86,6 +89,7 @@ struct CanvasGestures: View {
             if let moved = moveOriginalLayer {
                 state.selectedLayerID = moved.id
             }
+            state.commitDragSession()
             moveOriginalLayer = nil
         case .text:
             break
@@ -115,11 +119,9 @@ struct CanvasGestures: View {
         }
         guard let original = moveOriginalLayer else { return }
         let offset = CGSize(width: current.x - start.x, height: current.y - start.y)
-        // Skip the zero-offset replace that would otherwise push a no-op onto the
-        // undo stack and silently clear the redo tail (UndoStack.push removes future).
         if offset == .zero { return }
         let translated = translate(layer: original, by: offset)
-        state.replace(translated)
+        state.replaceLive(translated)
     }
 
     private func translate(layer: AnnotationLayer, by offset: CGSize) -> AnnotationLayer {
@@ -156,14 +158,12 @@ struct CanvasGestures: View {
 
         let newLayer = makeLayerForCurrentTool(rect: rect, line: line)
 
-        if let id = inProgressLayerID,
-           let existingIdx = state.document.layers.firstIndex(where: { $0.id == id }) {
-            // Replace in place
-            let layerWithSameID = newLayer.withID(id)
-            state.replace(layerWithSameID)
-            _ = existingIdx
+        if let id = inProgressLayerID {
+            // Replace the in-progress layer in place. Drag session keeps this
+            // out of the undo stack until commitDragSession at handleEnded.
+            state.replaceLive(newLayer.withID(id))
         } else {
-            state.add(newLayer)
+            state.addLive(newLayer)
             inProgressLayerID = newLayer.id
         }
     }
@@ -204,7 +204,7 @@ struct CanvasGestures: View {
                 thickness: state.currentTool == .highlighter ? max(state.currentThickness, 12) : state.currentThickness,
                 isHighlighter: state.currentTool == .highlighter
             ))
-            state.add(layer)
+            state.addLive(layer)
             inProgressLayerID = layer.id
         } else {
             freehandPoints.append(point)
@@ -214,7 +214,7 @@ struct CanvasGestures: View {
                 thickness: state.currentTool == .highlighter ? max(state.currentThickness, 12) : state.currentThickness,
                 isHighlighter: state.currentTool == .highlighter
             ), id: inProgressLayerID!)
-            state.replace(updated)
+            state.replaceLive(updated)
         }
     }
 

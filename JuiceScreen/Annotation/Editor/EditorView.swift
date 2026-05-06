@@ -22,7 +22,7 @@ struct EditorView: View {
                     .frame(width: canvasPointSize.width, height: canvasPointSize.height)
             }
             .frame(width: canvasPointSize.width, height: canvasPointSize.height)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(20)
             .background(Color(nsColor: .windowBackgroundColor))
         }
