@@ -96,6 +96,20 @@ struct EditorToolbar: View {
 
             Divider().frame(height: 22).padding(.horizontal, 4)
 
+            ActionButton(systemImage: "plus.square.on.square", help: "Duplicate selection (⌘D)",
+                         disabled: state.selectedLayerID == nil) {
+                state.duplicateSelected()
+            }
+            .keyboardShortcut("d", modifiers: .command)
+
+            ActionButton(systemImage: "trash", help: "Delete selection (⌫)",
+                         disabled: state.selectedLayerID == nil) {
+                state.deleteSelected()
+            }
+            .keyboardShortcut(.delete, modifiers: [])
+
+            Divider().frame(height: 22).padding(.horizontal, 4)
+
             ActionButton(systemImage: "doc.on.doc", help: "Copy to clipboard (⌘C)") {
                 actions.copyToClipboard()
             }
