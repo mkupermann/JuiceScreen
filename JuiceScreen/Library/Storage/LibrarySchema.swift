@@ -3,9 +3,11 @@ import GRDB
 
 /// Versioned schema migrations for the JuiceScreen library database.
 ///
-/// v1: Creates the `captures` table, the `captures_fts` FTS5 virtual table
-/// (populated only by Plan 5's OCR pipeline — no rows are written to it in Plan 4),
-/// and two indexes for common query paths.
+/// v1: Creates the `captures` table, the `captures_fts` FTS5 virtual table, and
+///     two indexes for common query paths.
+/// v2: Adds the `captures_ocr_cache` side table that mirrors FTS5 content (the
+///     FTS5 table uses content='' so it cannot reproduce its own rows; the cache
+///     enables `delete` operations to clear FTS5 tokens correctly).
 public enum LibrarySchema {
 
     public static func migrator() -> DatabaseMigrator {
@@ -47,6 +49,15 @@ public enum LibrarySchema {
             try db.execute(sql: """
                 CREATE INDEX idx_captures_deleted_at
                     ON captures(deleted_at) WHERE deleted_at IS NULL
+            """)
+        }
+
+        migrator.registerMigration("v2") { db in
+            try db.execute(sql: """
+                CREATE TABLE captures_ocr_cache (
+                    uuid TEXT PRIMARY KEY,
+                    ocr_text TEXT NOT NULL
+                )
             """)
         }
 
