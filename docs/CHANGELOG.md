@@ -2,6 +2,14 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.0.3] — 2026-05-06
+
+### Fixed
+- Settings window opened with a blank content area on macOS where SwiftUI's `TabView` outside the `Settings` scene renders empty. Rewritten as a `NavigationSplitView` (sidebar listing the six tabs, content in the detail pane) — matches the modern macOS Settings layout.
+- Editor canvas size formula assumed a 2× backing scale and rendered too small on Macs with different display densities. Now reads `NSImage.size` directly (point-size, already accounts for the capture's backing scale) so the same image displays correctly across MacBook models.
+- No way to delete a selected layer in the editor — `.onKeyPress(.delete)` requires view focus, which the editor doesn't always have. Added a Delete (`⌫`) button in the toolbar's right action group, bound via `Button.keyboardShortcut(.delete)` so it fires window-wide.
+- No way to duplicate a selected layer either; added a Duplicate (`⌘D`) button next to Delete with the same focus-independent shortcut.
+
 ## [1.0.2] — 2026-05-06
 
 ### Fixed
