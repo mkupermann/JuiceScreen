@@ -2,7 +2,7 @@
 
 Open-source, 100% local screen capture for macOS. Region / window / full-screen / scroll capture, video recording with audio, annotation, OCR-indexed library search.
 
-**Status:** v0.1.0 — Foundation milestone. Menu-bar shell, permissions flow, and Settings stub work. Capture functionality lands in subsequent milestones.
+**Status:** v1.0.0 — first public release. All 10 implementation milestones complete. See `docs/CHANGELOG.md` for what's in this version.
 
 ## Why
 
