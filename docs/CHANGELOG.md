@@ -2,6 +2,11 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.0.6] — 2026-05-06
+
+### Fixed
+- Region selection rendered mirrored relative to the cursor after the app had been quit and relaunched once Screen Recording permission was registered. Cause: AppKit/SwiftUI coordinate translation in the NSEvent-driven picker drifted whenever macOS adjusted safe-area insets between launches. Rewrote the picker to drive the drag entirely from SwiftUI's `DragGesture` inside a `GeometryReader` — gesture coords and rendering coords are guaranteed to share the same `proxy.size` rectangle, so the selection always tracks the cursor regardless of permission state, launch number, or screen.
+
 ## [1.0.5] — 2026-05-06
 
 ### Fixed
