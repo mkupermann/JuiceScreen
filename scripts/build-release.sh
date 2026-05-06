@@ -58,4 +58,16 @@ if [[ ! -d "$EXPORT_DIR/JuiceScreen.app" ]]; then
     exit 1
 fi
 
+# 5. Deep ad-hoc re-sign. xcodebuild's export step preserves Sparkle.framework's
+#    upstream signature, which has a different team identifier than the ad-hoc
+#    signed app. macOS's dyld then refuses to load the framework into the app
+#    process ("mapping process and mapped file have different Team IDs"), and
+#    the app fails to launch on first install.
+#
+#    `codesign --force --deep --sign -` walks the bundle bottom-up and re-signs
+#    every embedded framework / dylib / xpc with the same ad-hoc identity, so
+#    the team-ID match check passes uniformly.
+codesign --force --deep --sign - "$EXPORT_DIR/JuiceScreen.app"
+codesign --verify --deep --strict "$EXPORT_DIR/JuiceScreen.app"
+
 echo "✅ Built JuiceScreen $VERSION → $EXPORT_DIR/JuiceScreen.app"
