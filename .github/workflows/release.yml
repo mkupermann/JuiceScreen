@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*.*.*'
 
+permissions:
+  contents: write   # required so softprops/action-gh-release can create the draft release
+
 jobs:
   build-dmg:
     runs-on: macos-15
