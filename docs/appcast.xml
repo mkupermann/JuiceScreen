@@ -8,6 +8,25 @@
         <description>Open-source, 100% local screen capture for macOS.</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.2</title>
+            <pubDate>Mi., 06 Mai 2026 14:30:10 +0000</pubDate>
+            <sparkle:version>1.0.2</sparkle:version>
+            <sparkle:shortVersionString>1.0.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+### Fixed
+- Drag-to-create and drag-to-move pushed one undo entry per drag tick, so a 30-pixel drag produced ~30 undo states. `⌘Z` undid one pixel of movement instead of the whole gesture. Drags now run as a single session: snapshot the document on first onChanged, mutate `current` directly during the drag, push exactly one undo entry on gesture end. Side benefit: the redo tail isn't cleared mid-drag any more.
+- `⌘Z` / `⌘⇧Z` were not reaching the editor in the new top-toolbar layout. `.onKeyPress` requires view focus, which the editor doesn't always have. Bound the shortcuts to the visible Undo / Redo toolbar buttons via `Button.keyboardShortcut`, which fires at window level.
+- Gaussian blur layers couldn't be selected — clicking on the visible soft halo missed the strict-rect hit-test. `HitTest.contains` now expands the hit region by `intensity` for gaussian blur; pixelate keeps the strict rect (sharp edges).
+- Captured image rendered in the upper-left of the editor with a sea of grey filling the rest of the window. The canvas now centres inside its parent frame.
+- Editor window chrome math was stale (assumed the old left-rail palette + single contextual row). Updated to match the two-row top toolbar plus 20pt canvas padding. Initial size capped at visible screen size minus 40pt margin so a 5K capture doesn't open offscreen.]]></description>
+            <enclosure
+                url="https://github.com/mkupermann/JuiceScreen/releases/download/v1.0.2/JuiceScreen-1.0.2.dmg"
+                length="4197983"
+                type="application/octet-stream"
+                sparkle:edSignature="VQXlK2nv1/0jNVDnLKvr/aF63NZ5gRdAQDeRk2nnU7/d95w2LolBzHEonGRSY0sYuKAv/WoyfKPhS2HcJLJzAg" />
+        </item>
+        <item>
             <title>Version 1.0.1</title>
             <pubDate>Mi., 06 Mai 2026 10:57:52 +0000</pubDate>
             <sparkle:version>1.0.1</sparkle:version>
