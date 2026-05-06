@@ -118,15 +118,6 @@ public final class LibraryStoreLive: LibraryStore {
                 sql: "SELECT rowid FROM captures WHERE uuid = ?",
                 arguments: [id.uuidString]) else { return }
 
-            // Maintain a side table to cache old OCR text so we can issue the FTS5 'delete'
-            // command (content='' tables require old values to de-index tokens correctly).
-            try db.execute(sql: """
-                CREATE TABLE IF NOT EXISTS captures_ocr_cache (
-                    uuid TEXT PRIMARY KEY,
-                    ocr_text TEXT NOT NULL
-                )
-            """)
-
             // If an old entry exists, remove its tokens from the FTS index first.
             if let oldText = try String.fetchOne(db,
                 sql: "SELECT ocr_text FROM captures_ocr_cache WHERE uuid = ?",
