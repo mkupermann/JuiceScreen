@@ -2,7 +2,18 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-## [1.0.0] — 2026-05-06
+## [1.0.1] — 2026-05-06
+
+### Fixed
+- App failed to launch on first install with `Library not loaded: @rpath/Sparkle.framework`. `xcodebuild`'s archive-export step preserved Sparkle.framework's upstream code signature, which carries a different team identifier than the ad-hoc-signed host app. macOS 14.4+ refuses to load mismatched frameworks into the host process. The release build script now runs `codesign --force --deep --sign -` after export so every embedded framework shares the host's ad-hoc identity. v1.0.0 DMGs are install-broken and superseded by this release.
+
+### Changed (release pipeline only — no app behaviour change)
+- `scripts/sign-update.sh` reads the EdDSA private key from the macOS keychain by default; `SPARKLE_ED_KEY` is now an optional override.
+- `scripts/update-appcast.sh` passes the new `<item>` block via tmp file so macOS BSD `awk` accepts it (the previous `-v` form silently dropped the item).
+- Appcast moved from `appcast/appcast.xml` to `docs/appcast.xml` so GitHub Pages can serve it (Pages allows only `/` or `/docs` source paths).
+- `release.yml` declares `permissions: contents: write` so the workflow's `GITHUB_TOKEN` can create the draft release.
+
+## [1.0.0] — 2026-05-06 — install-broken, superseded by 1.0.1
 
 First public release.
 
