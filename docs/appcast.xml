@@ -8,6 +8,21 @@
         <description>Open-source, 100% local screen capture for macOS.</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.5</title>
+            <pubDate>Mi., 06 Mai 2026 16:31:19 +0000</pubDate>
+            <sparkle:version>1.0.5</sparkle:version>
+            <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+### Fixed
+- Editor canvas was visibly too tall on Macs with displays whose backing scale isn't exactly 2×. The capture engine constructed `NSImage` with a hardcoded `/2` divisor, which is correct for typical Retina but wrong on 1×, 1.5×, or 3× displays. Now reads the captured `SCDisplay`'s matching `NSScreen.backingScaleFactor` and divides by the actual value.]]></description>
+            <enclosure
+                url="https://github.com/mkupermann/JuiceScreen/releases/download/v1.0.5/JuiceScreen-1.0.5.dmg"
+                length="4215506"
+                type="application/octet-stream"
+                sparkle:edSignature="K78AzhED44jo5DJ7I+UFJv2zQlmQDSPOdIlE6byi8tdhSfHcbqu+EuZ+AHs4Coy48WvqPmu2O/mPG1I+DgotBA" />
+        </item>
+        <item>
             <title>Version 1.0.3</title>
             <pubDate>Mi., 06 Mai 2026 16:02:32 +0000</pubDate>
             <sparkle:version>1.0.3</sparkle:version>
