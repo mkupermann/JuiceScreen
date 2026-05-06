@@ -1,13 +1,18 @@
 import AppKit
 import SwiftUI
 
-/// Orchestrates the region picker overlay across every display.
+/// Region picker overlay across every display.
 ///
-/// macOS does not reliably draw or accept events in a single window that spans
-/// multiple displays — only the display the window is "anchored" to behaves.
-/// We create one overlay window per `NSScreen`, share a single selection state
-/// in global screen coordinates, and translate to each window's local coords
-/// when rendering. The user can drag from any display.
+/// One overlay window per `NSScreen`. The drag is owned by SwiftUI's
+/// `DragGesture` inside `RegionPickerView`; the controller just plumbs
+/// callbacks. Whichever overlay's gesture begins first becomes the active
+/// overlay — the others are deactivated for the rest of that drag.
+///
+/// SwiftUI's `value.location` is already in the view's local top-left
+/// coords, so no AppKit coordinate translation happens at event time.
+/// We only convert at gesture-end, mapping the active overlay's local rect
+/// to AppKit bottom-left global screen coords (what `displayGlobalFrame`
+/// in `CaptureEngineLive` subtracts from to derive the SC `sourceRect`).
 @MainActor
 public final class RegionPickerController {
 
@@ -17,161 +22,113 @@ public final class RegionPickerController {
     }
 
     private var overlays: [Overlay] = []
-    private var localMonitor: Any?
     private var continuation: CheckedContinuation<CGRect, Error>?
 
-    /// Selection in global screen coordinates (lower-left origin, AppKit convention).
-    private var selection: RegionSelection?
-    /// Cursor in global screen coordinates.
-    private var cursor: CGPoint?
+    /// The screen whose overlay started the active drag. nil before mouseDown.
+    private var activeScreen: NSScreen?
+    /// Esc-to-cancel monitor.
+    private var escMonitor: Any?
 
     public init() {}
 
-    /// Returns the selected rectangle in global screen coordinates (origin at the
-    /// lower-left of the unioned screen frame, matching AppKit's coordinate space —
-    /// which is what `ScreenCaptureKit`'s `sourceRect` expects when scoped to a display).
     public func pickRegion() async throws -> CGRect {
         let screens = NSScreen.screens
         guard !screens.isEmpty else {
             throw CaptureError.noDisplaysAvailable
         }
 
-        // One overlay per screen, sized to that screen's frame.
+        // Build per-screen overlays.
         for screen in screens {
             let win = RegionPickerOverlayWindow(frame: screen.frame)
             overlays.append(Overlay(window: win, screen: screen))
         }
-
-        rebuildAllContent()
+        // Wire the SwiftUI host view for each overlay.
         for entry in overlays {
+            installContent(for: entry)
             entry.window.makeKeyAndOrderFront(nil)
         }
         NSApp.activate(ignoringOtherApps: true)
 
-        installEventMonitor()
+        installEscMonitor()
 
         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<CGRect, Error>) in
             self.continuation = cont
         }
     }
 
-    // MARK: - Event monitor
+    // MARK: - View installation
 
-    private func installEventMonitor() {
-        let mask: NSEvent.EventTypeMask = [.leftMouseDown, .leftMouseDragged, .leftMouseUp, .mouseMoved, .keyDown]
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
-            guard let self else { return event }
-            return self.handle(event)
-        }
-    }
-
-    private func removeEventMonitor() {
-        if let m = localMonitor {
-            NSEvent.removeMonitor(m)
-            localMonitor = nil
-        }
-    }
-
-    private func handle(_ event: NSEvent) -> NSEvent? {
-        // Translate event location to global screen coordinates regardless of
-        // which overlay window received it.
-        guard let win = event.window as? RegionPickerOverlayWindow else { return event }
-        let pointInScreen = win.convertPoint(toScreen: event.locationInWindow)
-
-        switch event.type {
-        case .mouseMoved:
-            cursor = pointInScreen
-            rebuildAllContent()
-            return event
-
-        case .leftMouseDown:
-            selection = RegionSelection(start: pointInScreen, current: pointInScreen)
-            cursor = pointInScreen
-            rebuildAllContent()
-            return nil
-
-        case .leftMouseDragged:
-            if var s = selection {
-                s.current = pointInScreen
-                selection = s
-            }
-            cursor = pointInScreen
-            rebuildAllContent()
-            return nil
-
-        case .leftMouseUp:
-            if let s = selection, s.isUsable {
-                finish(.success(s.normalized))
-            } else {
-                finish(.failure(.userCancelled))
-            }
-            return nil
-
-        case .keyDown:
-            switch event.keyCode {
-            case 53: // Esc
-                finish(.failure(.userCancelled))
-                return nil
-            case 36, 76: // Return, KP-Enter
-                if let s = selection, s.isUsable {
-                    finish(.success(s.normalized))
-                } else {
-                    finish(.failure(.userCancelled))
-                }
-                return nil
-            case 123, 124, 125, 126: // Left, Right, Down, Up
-                if var s = selection {
-                    let stepped: CGFloat = event.modifierFlags.contains(.shift) ? 10 : 1
-                    let dx: CGFloat = event.keyCode == 123 ? -stepped : event.keyCode == 124 ? stepped : 0
-                    let dy: CGFloat = event.keyCode == 125 ? -stepped : event.keyCode == 126 ? stepped : 0
-                    s = s.nudged(by: CGSize(width: dx, height: dy))
-                    selection = s
-                    rebuildAllContent()
-                }
-                return nil
-            default:
-                return event
-            }
-
-        default:
-            return event
-        }
-    }
-
-    // MARK: - Rendering
-
-    private func rebuildAllContent() {
-        for entry in overlays {
-            rebuildContent(for: entry)
-        }
-    }
-
-    private func rebuildContent(for entry: Overlay) {
-        let screenOrigin = entry.screen.frame.origin
-        let localSelection = selection.map { sel in
-            RegionSelection(
-                start:   CGPoint(x: sel.start.x   - screenOrigin.x, y: sel.start.y   - screenOrigin.y),
-                current: CGPoint(x: sel.current.x - screenOrigin.x, y: sel.current.y - screenOrigin.y)
-            )
-        }
-        let localCursor = cursor.map { CGPoint(x: $0.x - screenOrigin.x, y: $0.y - screenOrigin.y) }
-
+    private func installContent(for entry: Overlay) {
         let view = RegionPickerView(
             canvasSize: entry.screen.frame.size,
-            selection: localSelection,
-            cursor: localCursor
+            isActive: activeScreen == nil ? true : (activeScreen === entry.screen),
+            onBegan: { [weak self] in
+                self?.markActive(entry.screen)
+            },
+            onCommitted: { [weak self] localRect in
+                self?.commit(localRect: localRect, on: entry.screen)
+            }
         )
         entry.window.contentView = NSHostingView(rootView: view)
     }
 
-    // MARK: - Finish
+    /// First overlay to start a drag becomes the active one. Refresh other
+    /// overlays so their `isActive=false` setting is honoured.
+    private func markActive(_ screen: NSScreen) {
+        guard activeScreen == nil else { return }
+        activeScreen = screen
+        for entry in overlays where entry.screen !== screen {
+            installContent(for: entry)
+        }
+    }
+
+    // MARK: - Esc-to-cancel
+
+    private func installEscMonitor() {
+        escMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard let self else { return event }
+            if event.keyCode == 53 { // Escape
+                self.commit(localRect: nil, on: self.activeScreen ?? self.overlays.first!.screen)
+                return nil
+            }
+            return event
+        }
+    }
+
+    private func removeEscMonitor() {
+        if let m = escMonitor {
+            NSEvent.removeMonitor(m)
+            escMonitor = nil
+        }
+    }
+
+    // MARK: - Commit
+
+    /// `localRect` is in the active overlay's top-left local coords (SwiftUI
+    /// view-local). Convert to AppKit bottom-left global screen coords here.
+    private func commit(localRect: CGRect?, on screen: NSScreen) {
+        guard continuation != nil else { return }   // already finished
+        guard let localRect, localRect.width >= 1, localRect.height >= 1 else {
+            finish(.failure(.userCancelled))
+            return
+        }
+        let frame = screen.frame   // BL global
+        // Local TL → BL local: y_BL = screen.height - (y_TL + height)
+        let blLocalY = frame.height - (localRect.minY + localRect.height)
+        let globalRect = CGRect(
+            x: localRect.minX + frame.minX,
+            y: blLocalY + frame.minY,
+            width: localRect.width,
+            height: localRect.height
+        )
+        finish(.success(globalRect))
+    }
 
     private func finish(_ outcome: Result<CGRect, CaptureError>) {
-        removeEventMonitor()
+        removeEscMonitor()
         for entry in overlays { entry.window.orderOut(nil) }
         overlays.removeAll()
-        selection = nil
-        cursor = nil
+        activeScreen = nil
         switch outcome {
         case .success(let rect): continuation?.resume(returning: rect)
         case .failure(let error): continuation?.resume(throwing: error)
