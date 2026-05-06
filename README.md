@@ -27,13 +27,13 @@ See `docs/superpowers/specs/2026-05-04-juicescreen-design.md` for the full desig
 
 ## Installing
 
-JuiceScreen is currently pre-alpha. Once v1.0.0 ships:
+1. Download `JuiceScreen-X.Y.Z.dmg` from [Releases](https://github.com/mkupermann/JuiceScreen/releases).
+2. Open the DMG, drag `JuiceScreen.app` to `/Applications`.
+3. **First launch will be blocked** because the app is not code-signed. Right-click `JuiceScreen.app` in `/Applications` → **Open** → confirm. On macOS 15+, also visit **System Settings → Privacy & Security → "Open Anyway"** if needed.
+4. Grant Screen Recording permission when prompted.
+5. The first-run wizard explains the rest.
 
-1. Download `JuiceScreen-X.Y.Z.dmg` from [Releases](https://github.com/mkupermann/JuiceScreen/releases)
-2. Open the DMG and drag `JuiceScreen.app` to `/Applications`
-3. **First launch will be blocked** because the app is not code-signed. Right-click `JuiceScreen.app` in `/Applications` → **Open** → confirm. On macOS 15+, also visit **System Settings → Privacy & Security → "Open Anyway"** if needed
-4. Grant Screen Recording permission when prompted
-5. The first-run wizard will explain the rest
+**Why unsigned?** A signed/notarized DMG requires a $99/year Apple Developer account. JuiceScreen is free and open source — the trade-off is the one-time right-click prompt above. The DMG is EdDSA-signed via Sparkle for safe in-app updates after the first install.
 
 ## Developing
 
@@ -86,7 +86,7 @@ That is the entire network surface. No telemetry. No analytics. No crash reporte
 - macOS 15+ may re-prompt for Screen Recording permission weekly (Apple's behavior, not ours)
 - Scroll capture (v0.8): ~30% of complex web pages (sticky headers, lazy-load, parallax) produce ghosting or torn images. Native macOS apps and simple web pages stitch cleanly.
 - Scroll capture only handles vertical scroll in v0.8.
-- v0.9 ships with a placeholder Sparkle public key — the "Check for Updates" button will fail to find a feed until v1.0.0 publishes a signed appcast.
+- v1.0.0 is the first public release; the auto-update flow is functional but `mkupermann.github.io/JuiceScreen/appcast.xml` may take ~60 seconds after a release to reflect new versions (GitHub Pages cache).
 
 Vector PDF export and additional limitations will be documented as those features ship.
 
@@ -96,4 +96,4 @@ MIT. See `LICENSE`.
 
 ## Roadmap
 
-Implementation proceeds via 10 plans, each shipping a working artifact. Foundation (this milestone) is Plan 1 of 10. Subsequent plans add image capture (Plan 2), annotation (Plan 3), library + storage (Plan 4), OCR + search (Plan 5), video recording (Plan 6), trim (Plan 7), scroll capture (Plan 8), settings + Sparkle + PDF (Plan 9, ✅ v0.9.0), build pipeline + ship (Plan 10).
+All 10 plans shipped. v1.0.0 is the first public release. See `docs/CHANGELOG.md` for what landed in each milestone.
