@@ -57,14 +57,36 @@ ITEM="$(cat <<EOF
 EOF
 )"
 
-# Insert the new <item> immediately after the opening <channel> + its <title>/<link>/<description>/<language> elements.
-# Strategy: split appcast.xml at the first existing <item>, or at </channel> if no items yet.
+# Insert the new <item> immediately before the first existing <item>, or before
+# </channel> if there are no items yet. macOS BSD awk does not accept newlines
+# inside `-v var=...`, so the item is written to a tmp file and pulled in via
+# getline from BEGIN.
 TMP="$(mktemp)"
+ITEM_FILE="$(mktemp)"
+printf '%s\n' "$ITEM" > "$ITEM_FILE"
+trap 'rm -f "$ITEM_FILE" "$TMP"' EXIT
+
 if grep -q "<item>" "$APPCAST"; then
-    awk -v item="$ITEM" '/^[[:space:]]*<item>/ && !p { print item; p=1 } { print }' "$APPCAST" > "$TMP"
+    awk -v itemfile="$ITEM_FILE" '
+        BEGIN {
+            while ((getline line < itemfile) > 0) item = item ? item ORS line : line
+            close(itemfile)
+        }
+        /^[[:space:]]*<item>/ && !p { print item; p = 1 }
+        { print }
+    ' "$APPCAST" > "$TMP"
 else
-    awk -v item="$ITEM" '/<\/channel>/ { print item } { print }' "$APPCAST" > "$TMP"
+    awk -v itemfile="$ITEM_FILE" '
+        BEGIN {
+            while ((getline line < itemfile) > 0) item = item ? item ORS line : line
+            close(itemfile)
+        }
+        /<\/channel>/ { print item }
+        { print }
+    ' "$APPCAST" > "$TMP"
 fi
 mv "$TMP" "$APPCAST"
+trap - EXIT
+rm -f "$ITEM_FILE"
 
 echo "✅ Appended ${VERSION} to ${APPCAST}"
