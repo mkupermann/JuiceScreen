@@ -28,29 +28,83 @@ public final class SettingsWindow {
     }
 }
 
-/// Sidebar (list of tabs) + detail (the selected tab's content) — the modern macOS
-/// Settings layout. Replaces the older `TabView` build which rendered blank content
-/// outside the SwiftUI `Settings` scene on some macOS configurations.
+/// Plain HStack: List sidebar on the left, the selected tab's body on the right.
+/// Avoids `NavigationSplitView` and `TabView` (both rendered blank in some macOS
+/// configurations when used outside the SwiftUI Settings scene).
 private struct SettingsContainer: View {
-    @State private var selection: SettingsTab? = .general
+    @State private var selection: SettingsTab = .general
 
     var body: some View {
-        NavigationSplitView {
-            List(SettingsTab.allCases, selection: $selection) { tab in
-                Label(tab.title, systemImage: tab.symbol)
-                    .tag(Optional(tab))
-            }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
-        } detail: {
-            switch selection ?? .general {
-            case .general:   GeneralTab()
-            case .capture:   CaptureTab()
-            case .recording: RecordingTab()
-            case .hotkeys:   HotkeysTab()
-            case .storage:   StorageTab()
-            case .about:     AboutTab()
-            }
+        HStack(spacing: 0) {
+            sidebar
+                .frame(width: 200)
+                .background(.regularMaterial)
+
+            Divider()
+
+            detail
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(Color(nsColor: .windowBackgroundColor))
         }
         .frame(minWidth: 720, minHeight: 480)
+    }
+
+    private var sidebar: some View {
+        VStack(spacing: 2) {
+            ForEach(SettingsTab.allCases) { tab in
+                SidebarRow(tab: tab, isSelected: tab == selection) {
+                    selection = tab
+                }
+            }
+            Spacer()
+        }
+        .padding(.vertical, 8)
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        switch selection {
+        case .general:   GeneralTab()
+        case .capture:   CaptureTab()
+        case .recording: RecordingTab()
+        case .hotkeys:   HotkeysTab()
+        case .storage:   StorageTab()
+        case .about:     AboutTab()
+        }
+    }
+}
+
+private struct SidebarRow: View {
+    let tab: SettingsTab
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 10) {
+                Image(systemName: tab.symbol)
+                    .frame(width: 18)
+                    .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+                Text(tab.title)
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .padding(.horizontal, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+    }
+
+    private var background: Color {
+        if isSelected { return Color.accentColor.opacity(0.18) }
+        if isHovered  { return Color.primary.opacity(0.06) }
+        return .clear
     }
 }

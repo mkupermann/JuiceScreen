@@ -1,33 +1,51 @@
 import AppKit
 import SwiftUI
 
-/// Orchestrates the region picker overlay: shows a transparent NSWindow over
-/// every display, lets the user drag a rectangle, returns the selected CGRect
-/// (in global screen coordinates) or throws `CaptureError.userCancelled`.
+/// Orchestrates the region picker overlay across every display.
+///
+/// macOS does not reliably draw or accept events in a single window that spans
+/// multiple displays — only the display the window is "anchored" to behaves.
+/// We create one overlay window per `NSScreen`, share a single selection state
+/// in global screen coordinates, and translate to each window's local coords
+/// when rendering. The user can drag from any display.
 @MainActor
 public final class RegionPickerController {
 
-    private var window: RegionPickerOverlayWindow?
+    private struct Overlay {
+        let window: RegionPickerOverlayWindow
+        let screen: NSScreen
+    }
+
+    private var overlays: [Overlay] = []
     private var localMonitor: Any?
     private var continuation: CheckedContinuation<CGRect, Error>?
+
+    /// Selection in global screen coordinates (lower-left origin, AppKit convention).
     private var selection: RegionSelection?
+    /// Cursor in global screen coordinates.
     private var cursor: CGPoint?
 
     public init() {}
 
-    /// Returns the selected rectangle in global screen coordinates (origin at lower-left
-    /// of the unioned screen frame, matching AppKit's coordinate convention).
+    /// Returns the selected rectangle in global screen coordinates (origin at the
+    /// lower-left of the unioned screen frame, matching AppKit's coordinate space —
+    /// which is what `ScreenCaptureKit`'s `sourceRect` expects when scoped to a display).
     public func pickRegion() async throws -> CGRect {
-        // Compute the union frame of all screens — this is our overlay's bounds.
-        let union = NSScreen.screens.reduce(NSRect.zero) { acc, scr in acc.union(scr.frame) }
-        guard union.width > 0, union.height > 0 else {
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else {
             throw CaptureError.noDisplaysAvailable
         }
 
-        let win = RegionPickerOverlayWindow(frame: union)
-        self.window = win
-        rebuildContentView()
-        win.makeKeyAndOrderFront(nil)
+        // One overlay per screen, sized to that screen's frame.
+        for screen in screens {
+            let win = RegionPickerOverlayWindow(frame: screen.frame)
+            overlays.append(Overlay(window: win, screen: screen))
+        }
+
+        rebuildAllContent()
+        for entry in overlays {
+            entry.window.makeKeyAndOrderFront(nil)
+        }
         NSApp.activate(ignoringOtherApps: true)
 
         installEventMonitor()
@@ -55,34 +73,35 @@ public final class RegionPickerController {
     }
 
     private func handle(_ event: NSEvent) -> NSEvent? {
-        guard let window else { return event }
-        let pointInWindow = window.contentView?.convert(event.locationInWindow, from: nil) ?? event.locationInWindow
+        // Translate event location to global screen coordinates regardless of
+        // which overlay window received it.
+        guard let win = event.window as? RegionPickerOverlayWindow else { return event }
+        let pointInScreen = win.convertPoint(toScreen: event.locationInWindow)
 
         switch event.type {
         case .mouseMoved:
-            cursor = pointInWindow
-            rebuildContentView()
+            cursor = pointInScreen
+            rebuildAllContent()
             return event
 
         case .leftMouseDown:
-            selection = RegionSelection(start: pointInWindow, current: pointInWindow)
-            cursor = pointInWindow
-            rebuildContentView()
+            selection = RegionSelection(start: pointInScreen, current: pointInScreen)
+            cursor = pointInScreen
+            rebuildAllContent()
             return nil
 
         case .leftMouseDragged:
             if var s = selection {
-                s.current = pointInWindow
+                s.current = pointInScreen
                 selection = s
             }
-            cursor = pointInWindow
-            rebuildContentView()
+            cursor = pointInScreen
+            rebuildAllContent()
             return nil
 
         case .leftMouseUp:
             if let s = selection, s.isUsable {
-                let rect = windowRectToScreenRect(s.normalized)
-                finish(.success(rect))
+                finish(.success(s.normalized))
             } else {
                 finish(.failure(.userCancelled))
             }
@@ -95,7 +114,7 @@ public final class RegionPickerController {
                 return nil
             case 36, 76: // Return, KP-Enter
                 if let s = selection, s.isUsable {
-                    finish(.success(windowRectToScreenRect(s.normalized)))
+                    finish(.success(s.normalized))
                 } else {
                     finish(.failure(.userCancelled))
                 }
@@ -107,7 +126,7 @@ public final class RegionPickerController {
                     let dy: CGFloat = event.keyCode == 125 ? -stepped : event.keyCode == 126 ? stepped : 0
                     s = s.nudged(by: CGSize(width: dx, height: dy))
                     selection = s
-                    rebuildContentView()
+                    rebuildAllContent()
                 }
                 return nil
             default:
@@ -119,30 +138,38 @@ public final class RegionPickerController {
         }
     }
 
-    // MARK: - Coordinate conversion
+    // MARK: - Rendering
 
-    /// Converts a rect in the overlay window's local coordinates to global screen coordinates
-    /// (the same coordinate space that ScreenCaptureKit's `sourceRect` expects, when scoped to a display).
-    private func windowRectToScreenRect(_ windowRect: CGRect) -> CGRect {
-        guard let window else { return windowRect }
-        let originInScreen = window.convertPoint(toScreen: windowRect.origin)
-        return CGRect(origin: originInScreen, size: windowRect.size)
+    private func rebuildAllContent() {
+        for entry in overlays {
+            rebuildContent(for: entry)
+        }
     }
 
-    private func rebuildContentView() {
-        guard let window else { return }
+    private func rebuildContent(for entry: Overlay) {
+        let screenOrigin = entry.screen.frame.origin
+        let localSelection = selection.map { sel in
+            RegionSelection(
+                start:   CGPoint(x: sel.start.x   - screenOrigin.x, y: sel.start.y   - screenOrigin.y),
+                current: CGPoint(x: sel.current.x - screenOrigin.x, y: sel.current.y - screenOrigin.y)
+            )
+        }
+        let localCursor = cursor.map { CGPoint(x: $0.x - screenOrigin.x, y: $0.y - screenOrigin.y) }
+
         let view = RegionPickerView(
-            canvasSize: window.frame.size,
-            selection: selection,
-            cursor: cursor
+            canvasSize: entry.screen.frame.size,
+            selection: localSelection,
+            cursor: localCursor
         )
-        window.contentView = NSHostingView(rootView: view)
+        entry.window.contentView = NSHostingView(rootView: view)
     }
+
+    // MARK: - Finish
 
     private func finish(_ outcome: Result<CGRect, CaptureError>) {
         removeEventMonitor()
-        window?.orderOut(nil)
-        window = nil
+        for entry in overlays { entry.window.orderOut(nil) }
+        overlays.removeAll()
         selection = nil
         cursor = nil
         switch outcome {
