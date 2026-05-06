@@ -62,7 +62,7 @@ public final class CaptureEngineLive: CaptureEngine {
         )
         let cfg = ScreenCaptureKitHelpers.configuration(for: display, regionInPoints: displayLocal)
         let cg = try await ScreenCaptureKitHelpers.captureImage(filter: filter, configuration: cfg)
-        return try await persist(cg: cg, captureType: .lastRegion, sourceApp: nil)
+        return try await persist(cg: cg, captureType: .lastRegion, sourceApp: nil, scaleFactor: backingScaleFactor(for: display))
     }
 
     // MARK: - Region
@@ -99,7 +99,7 @@ public final class CaptureEngineLive: CaptureEngine {
         prefs.lastRegion = regionInScreen
         preferences.save(prefs)
 
-        return try await persist(cg: cg, captureType: .region, sourceApp: nil)
+        return try await persist(cg: cg, captureType: .region, sourceApp: nil, scaleFactor: backingScaleFactor(for: display))
     }
 
     /// Returns the SCDisplay whose global frame contains `point`, or nil.
@@ -142,7 +142,7 @@ public final class CaptureEngineLive: CaptureEngine {
         )
         let cfg = ScreenCaptureKitHelpers.configuration(for: display)
         let cg = try await ScreenCaptureKitHelpers.captureImage(filter: filter, configuration: cfg)
-        return try await persist(cg: cg, captureType: .fullScreen, sourceApp: nil)
+        return try await persist(cg: cg, captureType: .fullScreen, sourceApp: nil, scaleFactor: backingScaleFactor(for: display))
     }
 
     // MARK: - Window
@@ -154,13 +154,25 @@ public final class CaptureEngineLive: CaptureEngine {
         cfg.showsCursor = false
         // The picker's filter already encodes which window to capture; SC handles sizing.
         let cg = try await ScreenCaptureKitHelpers.captureImage(filter: filter, configuration: cfg)
-        return try await persist(cg: cg, captureType: .window, sourceApp: nil)
+        // Window captures don't bind to a single SCDisplay; use the main screen's
+        // backing scale as the best guess (most users keep windows on the main display).
+        let scale = NSScreen.main?.backingScaleFactor ?? 2.0
+        return try await persist(cg: cg, captureType: .window, sourceApp: nil, scaleFactor: scale)
     }
 
     // MARK: - Helpers
 
-    private func persist(cg: CGImage, captureType: CaptureType, sourceApp: String?) async throws -> CaptureRecord {
-        let image = NSImage(cgImage: cg, size: NSSize(width: cg.width / 2, height: cg.height / 2))
+    private func persist(cg: CGImage, captureType: CaptureType, sourceApp: String?, scaleFactor: CGFloat) async throws -> CaptureRecord {
+        // Construct NSImage with point-size = pixel-size / display backing scale.
+        // Using a hardcoded /2 (assuming Retina) breaks on displays that are 1×,
+        // 1.5×, 3×, or any non-Retina external monitor — the canvas in the editor
+        // ends up the wrong size relative to the captured region.
+        let scale = max(scaleFactor, 1.0)
+        let pointSize = NSSize(
+            width:  CGFloat(cg.width)  / scale,
+            height: CGFloat(cg.height) / scale
+        )
+        let image = NSImage(cgImage: cg, size: pointSize)
         return try await MainActor.run {
             try writer.write(
                 image: image,
@@ -169,6 +181,19 @@ public final class CaptureEngineLive: CaptureEngine {
                 sourceApp: sourceApp
             )
         }
+    }
+
+    /// Looks up the NSScreen matching `display` and returns its `backingScaleFactor`.
+    /// Falls back to 2.0 (Retina) if no NSScreen matches — better than 1.0 because
+    /// most Macs are Retina, and an undersized canvas is more visually wrong than
+    /// a slightly-oversized one.
+    private func backingScaleFactor(for display: SCDisplay) -> CGFloat {
+        if let nsScreen = NSScreen.screens.first(where: { screen in
+            (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) == display.displayID
+        }) {
+            return nsScreen.backingScaleFactor
+        }
+        return 2.0
     }
 
     nonisolated private func ownApplications() async throws -> [SCRunningApplication] {
