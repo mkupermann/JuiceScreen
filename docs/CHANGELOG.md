@@ -2,6 +2,11 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.0.5] — 2026-05-06
+
+### Fixed
+- Editor canvas was visibly too tall on Macs with displays whose backing scale isn't exactly 2×. The capture engine constructed `NSImage` with a hardcoded `/2` divisor, which is correct for typical Retina but wrong on 1×, 1.5×, or 3× displays. Now reads the captured `SCDisplay`'s matching `NSScreen.backingScaleFactor` and divides by the actual value.
+
 ## [1.0.4] — 2026-05-06
 
 ### Fixed
