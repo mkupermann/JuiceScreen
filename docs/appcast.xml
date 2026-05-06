@@ -8,6 +8,27 @@
         <description>Open-source, 100% local screen capture for macOS.</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.1</title>
+            <pubDate>Mi., 06 Mai 2026 10:57:52 +0000</pubDate>
+            <sparkle:version>1.0.1</sparkle:version>
+            <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+### Fixed
+- App failed to launch on first install with `Library not loaded: @rpath/Sparkle.framework`. `xcodebuild`'s archive-export step preserved Sparkle.framework's upstream code signature, which carries a different team identifier than the ad-hoc-signed host app. macOS 14.4+ refuses to load mismatched frameworks into the host process. The release build script now runs `codesign --force --deep --sign -` after export so every embedded framework shares the host's ad-hoc identity. v1.0.0 DMGs are install-broken and superseded by this release.
+
+### Changed (release pipeline only — no app behaviour change)
+- `scripts/sign-update.sh` reads the EdDSA private key from the macOS keychain by default; `SPARKLE_ED_KEY` is now an optional override.
+- `scripts/update-appcast.sh` passes the new `&lt;item&gt;` block via tmp file so macOS BSD `awk` accepts it (the previous `-v` form silently dropped the item).
+- Appcast moved from `appcast/appcast.xml` to `docs/appcast.xml` so GitHub Pages can serve it (Pages allows only `/` or `/docs` source paths).
+- `release.yml` declares `permissions: contents: write` so the workflow's `GITHUB_TOKEN` can create the draft release.]]></description>
+            <enclosure
+                url="https://github.com/mkupermann/JuiceScreen/releases/download/v1.0.1/JuiceScreen-1.0.1.dmg"
+                length="4193438"
+                type="application/octet-stream"
+                sparkle:edSignature="kkrKkT6Kh7pezIpYLiARNnVxq8uQu91p5a4iecA8JjRbVMFYBvDEoMYeNEUVAZIqDeKhudeyL+oITTARqhQcBQ" />
+        </item>
+        <item>
             <title>Version 1.0.0</title>
             <pubDate>Mi., 06 Mai 2026 10:35:50 +0000</pubDate>
             <sparkle:version>1.0.0</sparkle:version>
