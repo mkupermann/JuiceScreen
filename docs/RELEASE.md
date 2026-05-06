@@ -26,7 +26,7 @@ JuiceScreen's auto-update requires every released DMG to be signed with an EdDSA
 
 ### Set up GitHub Pages for the appcast
 
-1. In the GitHub repo settings → Pages, choose source branch `main`, folder `/appcast`. Save.
+1. In the GitHub repo settings → Pages, choose source branch `main`, folder `/docs`. Save. (GitHub Pages only allows `/` or `/docs` as source paths; the appcast lives at `docs/appcast.xml` for that reason.)
 2. Verify the URL: `https://mkupermann.github.io/JuiceScreen/appcast.xml`. The empty template should render.
 3. Confirm `Info.plist` has `SUFeedURL = https://mkupermann.github.io/JuiceScreen/appcast.xml`.
 
@@ -79,7 +79,7 @@ URL="https://github.com/mkupermann/JuiceScreen/releases/download/v1.0.1/JuiceScr
 
 scripts/update-appcast.sh "$SIG" "$LEN" "$URL"
 
-git add appcast/appcast.xml
+git add docs/appcast.xml
 git commit -m "chore(appcast): publish v1.0.1"
 git push origin main
 ```
@@ -104,8 +104,8 @@ GitHub Pages picks up the new appcast within ~60 seconds.
 |---|---|
 | `release.yml` failed at "Verify VERSION matches tag" | The `VERSION` file and the tag disagree. Fix one and re-tag locally; force-push is fine since the release isn't published yet. |
 | `sign-update.sh` says `sign_update binary not found` | Run `scripts/build-release.sh` once locally to populate DerivedData. The Sparkle SPM checkout is what the script searches. |
-| `update-appcast.sh` says "appcast already has an entry for X" | You ran it twice. Either revert with `git restore appcast/appcast.xml` and re-run, or hand-edit if you intentionally want to re-publish. |
+| `update-appcast.sh` says "appcast already has an entry for X" | You ran it twice. Either revert with `git restore docs/appcast.xml` and re-run, or hand-edit if you intentionally want to re-publish. |
 | Users on 1.0.0 never see the 1.0.1 prompt | Check `Info.plist`'s `SUFeedURL`, browse it in a browser, validate XML, and confirm GitHub Pages is serving the latest commit (it can take ~60s). |
 | `Check for Updates` says "verification failed" | The `SUPublicEDKey` in `Info.plist` doesn't match the private key used to sign. Either you rotated keys (don't, unless compromised) or the wrong key was used. Re-sign with the correct one. |
 | `release.yml` failed at "Guard against placeholder Sparkle public key" | `Info.plist` still contains the literal `PLACEHOLDER_GENERATE_IN_PLAN_10`. Run the one-time keypair generation in the setup section above, commit the real public key into `Info.plist` (and `project.yml` so `xcodegen` preserves it), push, then re-tag. |
-| Bad release shipped — need to retract from auto-update | Edit `appcast/appcast.xml`: set the bad version's `<enclosure url="...">` to an empty string, and add `<sparkle:minimumAutoupdateVersion>X.Y.Z</sparkle:minimumAutoupdateVersion>` (where `X.Y.Z` is the bad version) to the next published `<item>` to force a skip past it. Commit and push the appcast change. Sparkle will stop offering the bad version on the next update check. |
+| Bad release shipped — need to retract from auto-update | Edit `docs/appcast.xml`: set the bad version's `<enclosure url="...">` to an empty string, and add `<sparkle:minimumAutoupdateVersion>X.Y.Z</sparkle:minimumAutoupdateVersion>` (where `X.Y.Z` is the bad version) to the next published `<item>` to force a skip past it. Commit and push the appcast change. Sparkle will stop offering the bad version on the next update check. |

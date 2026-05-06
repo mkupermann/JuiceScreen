@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Appends a new <item> entry to appcast/appcast.xml for the current VERSION.
+# Appends a new <item> entry to docs/appcast.xml for the current VERSION.
 #
 # Usage:
 #   scripts/update-appcast.sh <ed-signature> <length-bytes> <download-url>
@@ -24,7 +24,7 @@ if [[ -z "$EDSIG" ]] || [[ -z "$LEN" ]] || [[ -z "$URL" ]]; then
 fi
 
 VERSION="$(cat VERSION)"
-APPCAST="appcast/appcast.xml"
+APPCAST="docs/appcast.xml"
 DATE="$(date -u +"%a, %d %b %Y %H:%M:%S +0000")"
 MIN_OS="14.0"
 
