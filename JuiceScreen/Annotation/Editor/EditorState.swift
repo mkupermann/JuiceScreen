@@ -74,6 +74,64 @@ public final class EditorState {
         isEdited = true
     }
 
+    // MARK: - Drag sessions
+    //
+    // Gestures (drag-to-create, drag-to-move) call addLive / replaceLive on every
+    // onChanged tick to update the rendered document, but do NOT push onto the
+    // undo stack. At gesture end, commitDragSession pushes a single entry equal
+    // to the pre-drag snapshot — so the entire drag is one undo step and the
+    // redo tail isn't blown away mid-drag.
+
+    private var dragSnapshot: AnnotationDocument?
+
+    public var hasActiveDragSession: Bool { dragSnapshot != nil }
+
+    public func beginDragSession() {
+        if dragSnapshot == nil { dragSnapshot = undoStack.current }
+    }
+
+    public func addLive(_ layer: AnnotationLayer) {
+        beginDragSession()
+        var next = undoStack.current
+        next.append(layer)
+        undoStack.setCurrent(next)
+        isEdited = true
+    }
+
+    public func replaceLive(_ layer: AnnotationLayer) {
+        beginDragSession()
+        var next = undoStack.current
+        next.replace(layer)
+        undoStack.setCurrent(next)
+        isEdited = true
+    }
+
+    public func commitDragSession() {
+        guard let snap = dragSnapshot else { return }
+        // Only push if something actually changed (skip clicks-without-drag).
+        if undoStack.current.layers.count != snap.layers.count
+            || layerSignatures(undoStack.current.layers) != layerSignatures(snap.layers) {
+            undoStack.commitChange(from: snap)
+        }
+        dragSnapshot = nil
+    }
+
+    public func cancelDragSession() {
+        if let snap = dragSnapshot {
+            undoStack.setCurrent(snap)
+        }
+        dragSnapshot = nil
+    }
+
+    /// Cheap "did anything change" probe — compares each layer's id+bounding rect.
+    /// Avoids needing AnnotationLayer to be Equatable (NSColor + NSImage aren't).
+    private func layerSignatures(_ layers: [AnnotationLayer]) -> [String] {
+        layers.map { layer in
+            let r = layer.boundingRect
+            return "\(layer.id)|\(r.minX)|\(r.minY)|\(r.width)|\(r.height)"
+        }
+    }
+
     public func deleteSelected() {
         guard let id = selectedLayerID else { return }
         var next = undoStack.current

@@ -16,12 +16,24 @@ final class EditorWindow {
         self.actions = QuickActions(state: state, preferences: preferences)
         self.onClose = onClose
 
-        // Initial window size: half the capture's pixel size + chrome (toolbar + palette + topbar).
+        // Initial window size matches the canvas + the new top toolbar's two rows
+        // and the 20pt padding around the canvas inside EditorView.
         let canvasW = CGFloat(captureRecord.pixelWidth) / 2
         let canvasH = CGFloat(captureRecord.pixelHeight) / 2
-        let chromeW: CGFloat = 48 + 0   // tool palette
-        let chromeH: CGFloat = 40 + 28  // top bar + window title bar
-        let frame = NSRect(x: 0, y: 0, width: canvasW + chromeW, height: canvasH + chromeH)
+        // Horizontal: 20pt padding on each side of the canvas.
+        let chromeW: CGFloat = 40
+        // Vertical: tool-selector row (~46pt) + divider (1pt) + contextual TopBar (40pt)
+        // + 20pt padding above the canvas + 20pt padding below.
+        let chromeH: CGFloat = 46 + 1 + 40 + 20 + 20
+
+        // Cap the initial size so a huge capture (e.g. 5K) doesn't open a window
+        // larger than the screen. The window stays user-resizable.
+        let visibleFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let maxW = visibleFrame.width - 40
+        let maxH = visibleFrame.height - 40
+        let contentW = min(canvasW + chromeW, maxW)
+        let contentH = min(canvasH + chromeH, maxH)
+        let frame = NSRect(x: 0, y: 0, width: contentW, height: contentH)
 
         let win = NSWindow(
             contentRect: frame,
