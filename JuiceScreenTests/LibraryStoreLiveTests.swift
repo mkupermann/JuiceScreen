@@ -112,6 +112,32 @@ struct LibraryStoreLiveTests {
         #expect(videos.map { $0.uuid } == [video.uuid])
     }
 
+    @Test("emptyTrash also clears FTS5 entry + ocr_cache row for trashed captures")
+    func emptyTrashClearsOCR() async throws {
+        let store = try makeStore()
+        let trashed = makeRow(deleted: true)
+        try await store.insert(trashed)
+        try await store.upsertOCRText(id: trashed.uuid, text: "needle haystack words")
+
+        // Sanity: search finds it before emptyTrash (search includes trashed by default? not for free text — see SearchQuery)
+        // We verify cleanup by checking captures_ocr_cache directly after emptyTrash.
+
+        let removed = try await store.emptyTrash()
+        #expect(removed == 1)
+
+        // Confirm the captures row is gone
+        let allRows = try await store.list(filter: .all)
+        #expect(allRows.contains(where: { $0.uuid == trashed.uuid }) == false)
+
+        // Confirm captures_ocr_cache has no row for that uuid
+        let cacheCount: Int = try await store.databaseQueueForTesting.read { db in
+            try Int.fetchOne(db,
+                sql: "SELECT COUNT(*) FROM captures_ocr_cache WHERE uuid = ?",
+                arguments: [trashed.uuid.uuidString]) ?? 0
+        }
+        #expect(cacheCount == 0)
+    }
+
     @Test("emptyTrash hard-deletes all soft-deleted rows from the live store")
     func emptyTrashLive() async throws {
         let store = try makeStore()

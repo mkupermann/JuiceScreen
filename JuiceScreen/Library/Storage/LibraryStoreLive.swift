@@ -79,17 +79,31 @@ public final class LibraryStoreLive: LibraryStore {
 
     public func emptyTrash() async throws -> Int {
         try await databaseQueue.write { db in
-            // Fetch IDs first so we can also clean up FTS5/OCR side tables.
-            let ids: [String] = try String.fetchAll(db, sql: """
-                SELECT uuid FROM captures WHERE deleted_at IS NOT NULL
-            """)
-            for id in ids {
-                try db.execute(sql: "DELETE FROM captures WHERE uuid = ?", arguments: [id])
-                // Best-effort FTS5 cleanup; ignore errors since FTS rows may not exist.
-                try? db.execute(sql: "INSERT INTO captures_fts(captures_fts, rowid, text) VALUES('delete', (SELECT rowid FROM captures_ocr_cache WHERE uuid = ?), '')", arguments: [id])
-                try? db.execute(sql: "DELETE FROM captures_ocr_cache WHERE uuid = ?", arguments: [id])
+            // Fetch UUIDs and rowids first so we can clean FTS5 + cache for each.
+            struct Pair: FetchableRecord, Decodable {
+                let uuid: String
+                let rowid: Int64
             }
-            return ids.count
+            let rows = try Pair.fetchAll(db, sql: """
+                SELECT uuid, rowid FROM captures WHERE deleted_at IS NOT NULL
+            """)
+
+            for row in rows {
+                // Look up the cached OCR text so the FTS5 'delete' command can
+                // de-tokenize correctly (FTS5 content='' tables require old values).
+                if let oldText = try String.fetchOne(db,
+                    sql: "SELECT ocr_text FROM captures_ocr_cache WHERE uuid = ?",
+                    arguments: [row.uuid]) {
+                    try db.execute(sql: """
+                        INSERT INTO captures_fts(captures_fts, rowid, uuid, ocr_text, source_app)
+                        VALUES ('delete', ?, ?, ?, ?)
+                    """, arguments: [row.rowid, row.uuid, oldText, ""])
+                }
+                try db.execute(sql: "DELETE FROM captures_ocr_cache WHERE uuid = ?", arguments: [row.uuid])
+                try db.execute(sql: "DELETE FROM captures WHERE uuid = ?", arguments: [row.uuid])
+            }
+
+            return rows.count
         }
     }
 
@@ -232,6 +246,10 @@ public final class LibraryStoreLive: LibraryStore {
             deletedAt: deletedAtSeconds.map { Date(timeIntervalSince1970: TimeInterval($0)) }
         )
     }
+
+#if DEBUG
+    public var databaseQueueForTesting: DatabaseQueue { databaseQueue }
+#endif
 
     private static func whereClauseAndArguments(for filter: SmartFilter) -> (String, StatementArguments) {
         let cal = Calendar.current
