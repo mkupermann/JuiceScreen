@@ -2,6 +2,15 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.0.2] — 2026-05-06
+
+### Fixed
+- Drag-to-create and drag-to-move pushed one undo entry per drag tick, so a 30-pixel drag produced ~30 undo states. `⌘Z` undid one pixel of movement instead of the whole gesture. Drags now run as a single session: snapshot the document on first onChanged, mutate `current` directly during the drag, push exactly one undo entry on gesture end. Side benefit: the redo tail isn't cleared mid-drag any more.
+- `⌘Z` / `⌘⇧Z` were not reaching the editor in the new top-toolbar layout. `.onKeyPress` requires view focus, which the editor doesn't always have. Bound the shortcuts to the visible Undo / Redo toolbar buttons via `Button.keyboardShortcut`, which fires at window level.
+- Gaussian blur layers couldn't be selected — clicking on the visible soft halo missed the strict-rect hit-test. `HitTest.contains` now expands the hit region by `intensity` for gaussian blur; pixelate keeps the strict rect (sharp edges).
+- Captured image rendered in the upper-left of the editor with a sea of grey filling the rest of the window. The canvas now centres inside its parent frame.
+- Editor window chrome math was stale (assumed the old left-rail palette + single contextual row). Updated to match the two-row top toolbar plus 20pt canvas padding. Initial size capped at visible screen size minus 40pt margin so a 5K capture doesn't open offscreen.
+
 ## [1.0.1] — 2026-05-06
 
 ### Fixed
