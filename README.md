@@ -50,7 +50,7 @@ What the three TCC permissions do:
 
 - **Screen Recording** — frame data goes to local PNG / MP4 / PDF files in your save folder and to a local SQLite library at `~/Library/Application Support/JuiceScreen/`. Never transmitted.
 - **Microphone** — only requested when microphone capture is enabled in Settings → Recording. PCM audio is multiplexed into the recording's MP4 container. Microphone capture only runs while a recording is active.
-- **Input Monitoring** — only requested when click pulse or keystroke overlay is enabled in Settings → Recording. Pointer-click locations and the last three keys pressed are read so the recorder can draw the overlay into the video frames. The buffer is held in process memory and discarded when the recording session ends. Keystrokes are never written to disk or transmitted.
+- **Input Monitoring** — only requested when click pulse or keystroke overlay is enabled in Settings → Recording. Pointer-click locations and the last three keys pressed are read so the recorder can draw the overlay into the video frames. Held in process memory only, discarded when the recording session ends — nothing leaves the process.
 
 ## Developing
 
