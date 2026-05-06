@@ -42,6 +42,12 @@ struct EditorView: View {
     }
 
     private var canvasPointSize: CGSize {
+        // Use the NSImage's reported point size — it already accounts for the
+        // backing scale used at capture time, so the same image renders correctly
+        // on Macs with different display densities. Fall back to pixel/2 only if
+        // the image somehow has a zero size (defensive — shouldn't happen).
+        let s = state.document.baseImage.size
+        if s.width > 0 && s.height > 0 { return s }
         let pixelW = CGFloat(state.captureRecord.pixelWidth)
         let pixelH = CGFloat(state.captureRecord.pixelHeight)
         return CGSize(width: pixelW / 2, height: pixelH / 2)

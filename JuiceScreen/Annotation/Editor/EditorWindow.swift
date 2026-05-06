@@ -18,8 +18,12 @@ final class EditorWindow {
 
         // Initial window size matches the canvas + the new top toolbar's two rows
         // and the 20pt padding around the canvas inside EditorView.
-        let canvasW = CGFloat(captureRecord.pixelWidth) / 2
-        let canvasH = CGFloat(captureRecord.pixelHeight) / 2
+        // Prefer NSImage.size (already in points, accounts for the capture's backing
+        // scale) so the window fits the image correctly on Macs with any display
+        // density. Fall back to pixel/2 only if the image is zero-sized.
+        let imgSize = baseImage.size
+        let canvasW = imgSize.width  > 0 ? imgSize.width  : CGFloat(captureRecord.pixelWidth)  / 2
+        let canvasH = imgSize.height > 0 ? imgSize.height : CGFloat(captureRecord.pixelHeight) / 2
         // Horizontal: 20pt padding on each side of the canvas.
         let chromeW: CGFloat = 40
         // Vertical: tool-selector row (~46pt) + divider (1pt) + contextual TopBar (40pt)
