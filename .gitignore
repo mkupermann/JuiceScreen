@@ -5,6 +5,8 @@
 *.xcodeproj/
 DerivedData/
 build/
+*.xcarchive
+exportOptions.plist
 *.xcworkspace/
 xcuserdata/
 *.xcuserstate
