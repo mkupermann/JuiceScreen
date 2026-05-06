@@ -5,24 +5,26 @@ struct EditorView: View {
     let actions: QuickActions
 
     var body: some View {
-        HStack(spacing: 0) {
-            ToolPalette(state: state)
-            VStack(spacing: 0) {
-                TopBar(state: state)
-                ZStack(alignment: .topLeading) {
-                    AnnotationCanvas(baseImage: state.document.baseImage,
-                                     layers: state.document.layers,
-                                     canvasSize: canvasPointSize)
-                    if let id = state.selectedLayerID, let layer = state.document.layer(id: id) {
-                        SelectionHandlesView(layer: layer)
-                            .frame(width: canvasPointSize.width, height: canvasPointSize.height, alignment: .topLeading)
-                    }
-                    CanvasGestures(state: state)
-                        .frame(width: canvasPointSize.width, height: canvasPointSize.height)
+        VStack(spacing: 0) {
+            EditorToolbar(state: state, actions: actions)
+            ZStack(alignment: .topLeading) {
+                AnnotationCanvas(baseImage: state.document.baseImage,
+                                 layers: state.document.layers,
+                                 canvasSize: canvasPointSize)
+                BlurPreviewOverlay(baseImage: state.document.baseImage,
+                                   layers: state.document.layers,
+                                   canvasSize: canvasPointSize)
+                if let id = state.selectedLayerID, let layer = state.document.layer(id: id) {
+                    SelectionHandlesView(layer: layer)
+                        .frame(width: canvasPointSize.width, height: canvasPointSize.height, alignment: .topLeading)
                 }
-                .frame(width: canvasPointSize.width, height: canvasPointSize.height)
-                .clipped()
+                CanvasGestures(state: state)
+                    .frame(width: canvasPointSize.width, height: canvasPointSize.height)
             }
+            .frame(width: canvasPointSize.width, height: canvasPointSize.height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(20)
+            .background(Color(nsColor: .windowBackgroundColor))
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

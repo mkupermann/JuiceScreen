@@ -41,7 +41,7 @@ public enum ToolType: String, CaseIterable, Sendable, Hashable {
         case .pen:         return "pencil.tip"
         case .highlighter: return "highlighter"
         case .text:        return "textformat"
-        case .blur:        return "drop"
+        case .blur:        return "square.dashed"
         case .crop:        return "crop"
         }
     }

@@ -16,6 +16,7 @@ public final class EditorState {
     public var currentFilled: Bool = false
     public var currentBlurStyle: BlurProps.Style = .gaussian
     public var currentBlurIntensity: CGFloat = 12
+    public var currentText: String = ""
 
     public var selectedLayerID: UUID? = nil
     public var isEdited: Bool = false   // tracks whether anything has been added since open
@@ -25,6 +26,32 @@ public final class EditorState {
     public init(captureRecord: CaptureRecord, baseImage: NSImage) {
         self.captureRecord = captureRecord
         self.undoStack = UndoStack(initial: AnnotationDocument(baseImage: baseImage))
+    }
+
+    /// Canvas drawing area in points (Retina captures render at half pixel size).
+    public var canvasSize: CGSize {
+        CGSize(width: CGFloat(captureRecord.pixelWidth) / 2,
+               height: CGFloat(captureRecord.pixelHeight) / 2)
+    }
+
+    /// Drops a text layer at the centre of the canvas using the current text/style,
+    /// switches to the Select tool, and clears the buffered text. Switching tools
+    /// also moves keyboard focus off the TextField so the next canvas click is not
+    /// eaten by macOS dismissing the field.
+    public func placeTextAtCanvasCenter() {
+        let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        let body = currentText.isEmpty ? "Text" : currentText
+        let layer = AnnotationLayer.text(TextProps(
+            origin: center,
+            text: body,
+            color: currentColor,
+            fontName: currentFontName,
+            fontSize: currentFontSize
+        ))
+        add(layer)
+        selectedLayerID = layer.id
+        currentText = ""
+        currentTool = .select
     }
 
     public var document: AnnotationDocument { undoStack.current }

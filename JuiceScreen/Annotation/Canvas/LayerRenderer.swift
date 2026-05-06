@@ -114,11 +114,10 @@ public enum LayerRenderer {
     }
 
     private static func drawBlurPlaceholder(_ layer: AnnotationLayer, in ctx: inout GraphicsContext) {
-        let rect = layer.boundingRect
-        // semi-transparent gray fill + dashed stroke to indicate "blur applied here"
-        ctx.fill(Path(rect), with: .color(Color.gray.opacity(0.35)))
-        var dashed = StrokeStyle(lineWidth: 1)
-        dashed.dash = [4, 3]
-        ctx.stroke(Path(rect), with: .color(Color.gray.opacity(0.85)), style: dashed)
+        // Blur and pixelate layers render as a live SwiftUI overlay (BlurPreviewOverlay)
+        // — no in-canvas placeholder needed. This stub exists so the switch in `draw`
+        // stays exhaustive without flickering a grey box behind the real preview.
+        _ = layer
+        _ = ctx
     }
 }

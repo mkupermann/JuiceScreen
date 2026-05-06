@@ -37,10 +37,10 @@ struct CanvasGestures: View {
             state.selectedLayerID = nil
 
         case .text:
-            // Drop a text layer with placeholder text — user can edit via inspector or by typing
+            let body = state.currentText.isEmpty ? "Text" : state.currentText
             let layer = AnnotationLayer.text(TextProps(
                 origin: location,
-                text: "Text",
+                text: body,
                 color: state.currentColor,
                 fontName: state.currentFontName,
                 fontSize: state.currentFontSize
@@ -81,6 +81,11 @@ struct CanvasGestures: View {
             let rect = normalizedRect(from: value.startLocation, to: value.location)
             state.setCrop(rect.width >= 4 && rect.height >= 4 ? rect : nil)
         case .select:
+            // Commit selection now that the drag is over (deferred from updateSelectMove
+            // so we don't re-render mid-gesture and lose @State).
+            if let moved = moveOriginalLayer {
+                state.selectedLayerID = moved.id
+            }
             moveOriginalLayer = nil
         case .text:
             break
@@ -90,17 +95,29 @@ struct CanvasGestures: View {
     // MARK: - Select tool: drag-to-move the currently selected layer
 
     private func updateSelectMove(start: CGPoint, current: CGPoint) {
-        // First tick of the drag: snapshot the selected layer if the drag started inside its bounds.
+        // First tick of the drag: pick the layer to move.
+        // 1) If something is already selected and the drag started inside it, move that.
+        // 2) Otherwise, hit-test top-down and pick the topmost layer under `start` —
+        //    so a click+drag on an unselected layer selects-and-moves in one gesture.
+        //
+        // Note: do NOT write `state.selectedLayerID` here — that re-renders the view
+        // mid-gesture and resets @State. Commit the selection in handleEnded instead.
         if moveOriginalLayer == nil {
-            guard let id = state.selectedLayerID,
-                  let layer = state.document.layer(id: id),
-                  HitTest.contains(layer, point: start) else {
+            if let id = state.selectedLayerID,
+               let layer = state.document.layer(id: id),
+               HitTest.contains(layer, point: start) {
+                moveOriginalLayer = layer
+            } else if let layer = state.document.layers.reversed().first(where: { HitTest.contains($0, point: start) }) {
+                moveOriginalLayer = layer
+            } else {
                 return
             }
-            moveOriginalLayer = layer
         }
         guard let original = moveOriginalLayer else { return }
         let offset = CGSize(width: current.x - start.x, height: current.y - start.y)
+        // Skip the zero-offset replace that would otherwise push a no-op onto the
+        // undo stack and silently clear the redo tail (UndoStack.push removes future).
+        if offset == .zero { return }
         let translated = translate(layer: original, by: offset)
         state.replace(translated)
     }

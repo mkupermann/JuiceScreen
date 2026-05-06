@@ -32,7 +32,7 @@ struct ToolTypeTests {
         #expect(ToolType.pen.sfSymbol         == "pencil.tip")
         #expect(ToolType.highlighter.sfSymbol == "highlighter")
         #expect(ToolType.text.sfSymbol        == "textformat")
-        #expect(ToolType.blur.sfSymbol        == "drop")
+        #expect(ToolType.blur.sfSymbol        == "square.dashed")
         #expect(ToolType.crop.sfSymbol        == "crop")
     }
 
