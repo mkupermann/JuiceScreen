@@ -3,7 +3,7 @@ import Foundation
 /// Sweeps `<captureRoot>/.trash/` and removes files (and their containing
 /// per-capture folders, if empty afterward) older than `maxAgeDays`.
 /// Returns the number of files deleted.
-public struct TrashGC: Sendable {
+public struct TrashGC: @unchecked Sendable {
 
     private let captureRoot: URL
     private let maxAgeDays: Int

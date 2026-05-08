@@ -6,7 +6,7 @@ import Foundation
 /// Layout:
 ///   <root>/2026-05-04/
 ///   <root>/2026-05-05/
-public struct SaveDirectoryProvider: Sendable {
+public struct SaveDirectoryProvider: @unchecked Sendable {
 
     public let rootDirectory: URL
     public let filenameGenerator: FilenameGenerator

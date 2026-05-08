@@ -1,8 +1,7 @@
 import AppKit
 
-/// Action callbacks supplied to the menu builder. Each is fired when the corresponding
-/// menu item is chosen. Real implementations land in later plans (capture, recording, etc.);
-/// for Foundation they log a TODO message.
+/// Action callbacks supplied to the menu builder. Each is fired when the
+/// corresponding menu item is chosen.
 @MainActor
 public struct MenuBarActions {
     public var captureRegion: () -> Void

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct OCRSidecarStore: Sendable {
+public struct OCRSidecarStore: @unchecked Sendable {
 
     private let paths: LibraryPaths
     private let fileManager: FileManager
