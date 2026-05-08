@@ -13,9 +13,12 @@ struct RecordingControlBarView: View {
                 Image(systemName: "stop.circle.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(Color.red)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Stop Recording")
+            .keyboardShortcut(.escape, modifiers: [])
+            .help("Stop Recording (Esc)")
 
             Text(formattedElapsed)
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
@@ -26,6 +29,8 @@ struct RecordingControlBarView: View {
             Button(action: onToggleMic) {
                 Image(systemName: micEnabled ? "mic.fill" : "mic.slash.fill")
                     .foregroundStyle(micEnabled ? Color.primary : Color.secondary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help(micEnabled ? "Mute microphone" : "Microphone is muted")

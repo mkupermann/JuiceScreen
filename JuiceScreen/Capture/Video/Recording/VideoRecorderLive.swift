@@ -70,27 +70,34 @@ public final class VideoRecorderLive: NSObject, VideoRecorder {
             throw VideoRecordingError.noDisplaysAvailable
         }
 
-        let pixelDensity = 2
-        let regionInPoints: CGRect
-        switch mode {
-        case .fullScreen:
-            regionInPoints = CGRect(x: 0, y: 0, width: display.width, height: display.height)
-            screenOrigin = .zero
-        case .region(let r):
-            regionInPoints = r
-            screenOrigin = r.origin
-        }
-
+        // SCDisplay.width / .height are in pixels. SCStreamConfiguration.sourceRect
+        // is in points. Mixing the two (the original code did) asks SC for a region
+        // twice the size of the display on a Retina screen, so zero frames are
+        // produced and the resulting MP4 is empty.
         let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
         let cfg = SCStreamConfiguration()
-        cfg.width = Int(regionInPoints.width) * pixelDensity
-        cfg.height = Int(regionInPoints.height) * pixelDensity
         cfg.minimumFrameInterval = CMTime(value: 1, timescale: Int32(options.targetFps))
         cfg.queueDepth = 6
         cfg.pixelFormat = kCVPixelFormatType_32BGRA
         cfg.showsCursor = false   // we composite our own ring
         cfg.capturesAudio = options.captureSystemAudio
-        cfg.sourceRect = regionInPoints
+
+        switch mode {
+        case .fullScreen:
+            // No sourceRect → SC captures the entire display by default. Match
+            // output pixel dimensions to the display's native pixel size.
+            cfg.width = display.width
+            cfg.height = display.height
+            screenOrigin = .zero
+        case .region(let r):
+            // Region rects come from the picker in points (display-local).
+            // Output at 2× for Retina sharpness; SC documents sourceRect as points.
+            let pixelDensity = 2
+            cfg.width = Int(r.width) * pixelDensity
+            cfg.height = Int(r.height) * pixelDensity
+            cfg.sourceRect = r
+            screenOrigin = r.origin
+        }
 
         // Writer
         let frameSize = CGSize(width: cfg.width, height: cfg.height)
@@ -232,16 +239,27 @@ private final class StreamOutput: NSObject, SCStreamDelegate, SCStreamOutput, @u
         guard CMSampleBufferIsValid(sb), CMSampleBufferGetNumSamples(sb) > 0 else { return }
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sb) else { return }
 
-        // Lock + draw overlays into the pixel buffer
-        CVPixelBufferLockBaseAddress(pixelBuffer, [])
-        if let ctx = makeContext(for: pixelBuffer) {
-            compositor.draw(options: options, frameSize: frameSize, screenOrigin: screenOrigin, in: ctx)
+        framesReceived += 1
+        if framesReceived == 1 {
+            let w = CVPixelBufferGetWidth(pixelBuffer)
+            let h = CVPixelBufferGetHeight(pixelBuffer)
+            log.info("First video sample: \(w)x\(h), expected frame=\(Int(self.frameSize.width))x\(Int(self.frameSize.height))")
         }
-        CVPixelBufferUnlockBaseAddress(pixelBuffer, [])
+
+        // Skip the compositor for now — it locks the pixel buffer, draws via a
+        // CGContext over its base address, then unlocks. Any glitch there
+        // (wrong row stride, wrong colour space, simultaneous read by AVAssetWriter)
+        // can leave the buffer in a state where `videoAdaptor.append` rejects it
+        // and the resulting MP4 is empty. v1.0.x ships without overlays in the
+        // recording until the compositor is rebuilt to draw via Core Image
+        // (which composes safely without locking the underlying buffer).
+        // _ = compositor   // keep the reference live
 
         let pts = CMSampleBufferGetPresentationTimeStamp(sb)
         writer.appendVideo(pixelBuffer: pixelBuffer, presentationTime: pts)
     }
+
+    private var framesReceived: Int = 0
 
     private func makeContext(for pixelBuffer: CVPixelBuffer) -> CGContext? {
         let width = CVPixelBufferGetWidth(pixelBuffer)

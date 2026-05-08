@@ -29,6 +29,11 @@ public final class RecordingSession {
             self?.recorder.toggleMicrophoneMute()
         }
 
+        // Start the recorder FIRST. If it throws, no zombie control bar is left
+        // hovering over the screen with a broken stop button.
+        try await recorder.start(mode: mode, options: options, outputURL: outputURL)
+
+        // Recorder is live — show the floating control bar.
         let win = RecordingControlWindow(
             initialMicEnabled: micEnabled,
             onStop: onStopHandler,
@@ -37,9 +42,7 @@ public final class RecordingSession {
         self.controlWindow = win
         win.show()
 
-        try await recorder.start(mode: mode, options: options, outputURL: outputURL)
-
-        // Tick UI every 200ms to update the elapsed counter
+        // Tick UI every 200ms to update the elapsed counter.
         elapsedTimer?.invalidate()
         elapsedTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -55,13 +58,28 @@ public final class RecordingSession {
     }
 
     public func stop() async throws {
-        guard recorder.isRecording else { return }
-        let record = try await recorder.stop()
-        elapsedTimer?.invalidate()
-        elapsedTimer = nil
-        controlWindow?.close()
-        controlWindow = nil
-        onStopComplete(record)
-        log.info("Session ended → \(record.fileURL.path)")
+        // Always tear down the UI/timer/state, even if the recorder throws — a
+        // zombie control bar with an unstoppable recording is worse than a
+        // partially-saved MP4.
+        defer {
+            elapsedTimer?.invalidate()
+            elapsedTimer = nil
+            controlWindow?.close()
+            controlWindow = nil
+        }
+
+        guard recorder.isRecording else {
+            log.info("stop() called but recorder.isRecording = false; cleaning up UI only")
+            return
+        }
+
+        do {
+            let record = try await recorder.stop()
+            onStopComplete(record)
+            log.info("Session ended → \(record.fileURL.path)")
+        } catch {
+            log.error("recorder.stop failed: \(String(describing: error))")
+            throw error
+        }
     }
 }
