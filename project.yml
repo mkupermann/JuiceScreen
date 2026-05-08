@@ -103,3 +103,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: JuiceScreen
         PRODUCT_BUNDLE_IDENTIFIER: com.bks-lab.juicescreen.uitests
+        # Tests don't ship to users. Hardened Runtime + ad-hoc signing rejects
+        # dlopen of the test bundle into the Apple-provided XCTRunner with a
+        # "different Team IDs" error (no team ID on either side). Disabling
+        # Hardened Runtime for the UITests runner is the standard workaround.
+        ENABLE_HARDENED_RUNTIME: NO
