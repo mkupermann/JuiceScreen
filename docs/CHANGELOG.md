@@ -2,6 +2,24 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.0.7] — 2026-05-08
+
+### Fixed
+- Screen recording produced an empty MP4 on Retina displays. `SCStreamConfiguration.sourceRect` is documented in points but the previous code passed it `SCDisplay.width / .height`, which are pixels — so on any 2× display SC was asked for a region twice the size of the display, returned zero frames, and AVAssetWriter wrote a header-only MP4. Fix: only set `sourceRect` for region recordings (the picker hands points) and let SC default to the full display for full-screen mode, with output dimensions in display pixels.
+- Stop button on the floating recording control bar didn't fire on the first click. Two compounding causes: `NSWindow` silently ignores `.nonactivatingPanel` (only `NSPanel` honours it), so AppKit was treating every mouseDown as a window-drag candidate; and `NSHostingView` returns `acceptsFirstMouse = false` by default, so the SwiftUI button's first click was swallowed by the window-activation path. Switched to `NSPanel` + a `FirstClickHostingView` subclass + `isMovableByWindowBackground = false` + `becomesKeyOnlyIfNeeded = true`. Esc also stops recording now.
+- Recording-failure errors logged silently instead of surfacing. Permission failures (Screen Recording, Microphone, Input Monitoring) now route through a context-specific `NSAlert` that names the missing permission, links straight to the relevant System Settings pane, and explains how to disable the feature in JuiceScreen if the user prefers not to grant it.
+- Floating control bar could be left as a zombie window when the recorder failed to start or stop. `RecordingSession` now starts the recorder before showing the bar and tears down the UI in `defer` regardless of how the stop-path resolves.
+
+### Known regression
+- Cursor highlight ring, click pulse, and keystroke overlay are temporarily not composited into recorded MP4s. The buffer-locking + `CGContext`-over-base-address approach was contributing to the empty-MP4 condition and was disabled to ship the recording fix. The compositor will be rebuilt as a Core Image pipeline (no buffer locking, no shared base-address writes) in a follow-up release. Recordings work cleanly without the overlays in the meantime.
+
+### Internal
+- `JuiceScreenUITests` runner: `ENABLE_HARDENED_RUNTIME = NO`. With ad-hoc signing on both the XCTRunner and the test bundle, neither side carries a Team ID; Hardened Runtime's library validation rejected the cross-load as "different Team IDs". Disabling HR for the test runner only is the standard workaround.
+- `LaunchSmokeTests` assertion: accepts `.runningBackground` (LSUIElement apps never enter foreground).
+- New `CapturePipelineE2ETests` suite: integration test wiring synthetic capture → `LibraryStoreLive` → `CaptureLibraryRecorder` → `AnnotationDocument` → `ExportService`. Covers the pipeline a real user hits without needing Screen Recording permission in CI. 260 unit tests in 63 suites total now pass.
+- Six `Sendable` / FileManager Swift-6 strict-concurrency warnings resolved by `@unchecked Sendable` on the wrapper structs (FileManager.default is documented thread-safe for our usage).
+- README: factual currency pass + post-stakeholder-review polish (new Security section, EdDSA key fingerprint, Sparkle verification recipe, threat-model paragraph, explicit gap list vs CleanShot, third-party dependency enumeration in License, contributor signal in Developing).
+
 ## [1.0.6] — 2026-05-06
 
 ### Fixed
