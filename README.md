@@ -16,7 +16,7 @@ Region, window, full-screen, and scrolling-area capture. Video recording with au
 
 The DMG is unsigned — there is no Apple Developer ID behind the project, so first launch needs a right-click → Open.
 
-**Status:** v1.0.0 — first public release. See `docs/CHANGELOG.md` for what's in this version.
+**Status:** v1.0.6 — current release. v1.0.0 shipped install-broken on macOS 14.4+ (Sparkle framework signature mismatch); 1.0.1 fixed the bundling and 1.0.2 through 1.0.6 are user-facing fixes from real first-week use. Per-version detail in `docs/CHANGELOG.md`.
 
 ## Contents
 
@@ -74,7 +74,7 @@ To **edit an existing annotation**, switch to the Select tool (`V`), click the l
 
 ### Record a video of the screen
 
-1. Press `⌘⇧5`. A small floating control bar appears in the top-right of the screen showing the elapsed time and a stop button.
+1. Press `⌘⇧5`. A small floating control bar appears at the bottom of the screen showing the elapsed time, a Stop button, and a Mic toggle. **Esc** also stops the recording.
 2. macOS prompts for Screen Recording permission the first time. Grant it.
 3. The recording captures the primary display at the rate set in **Settings → Recording** (default 60 fps). System audio is mixed in by default; the microphone is off by default.
 4. Click the stop button on the floating bar, or press `⌘⇧5` again, to end the recording. The MP4 file lands in `~/Pictures/JuiceScreen/<date>/` and a `.video` row appears in the library.
@@ -206,7 +206,7 @@ open JuiceScreen.xcodeproj
 
 The `.xcodeproj` is regenerated from `project.yml` and is not committed. Edit `project.yml`, not the generated project.
 
-Tests (~257 unit tests in 62 suites; runs in ~2 seconds on M-series):
+Tests (260 unit tests in 63 suites + a UI smoke test; runs in ~2 seconds on M-series):
 
 ```bash
 xcodebuild test -scheme JuiceScreen -destination 'platform=macOS'
