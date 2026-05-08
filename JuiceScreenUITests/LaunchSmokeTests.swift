@@ -8,8 +8,12 @@ final class LaunchSmokeTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["JUICESCREEN_UI_TEST_MODE"] = "1"
         app.launch()
-        // App is LSUIElement — has no main window. Just confirm it didn't crash.
-        XCTAssertEqual(app.state, .runningForeground)
+        // LSUIElement = true means the process runs as a menu-bar agent and never
+        // takes foreground focus. .runningForeground would only happen if the app
+        // grabbed key focus, which it deliberately doesn't. Pass on any "running"
+        // state; fail only if the process didn't start.
+        XCTAssertNotEqual(app.state, .notRunning, "App failed to launch")
+        XCTAssertNotEqual(app.state, .unknown, "App in unknown state after launch")
         app.terminate()
         XCTAssertEqual(app.state, .notRunning)
     }
