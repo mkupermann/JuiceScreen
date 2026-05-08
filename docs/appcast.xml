@@ -8,6 +8,34 @@
         <description>Open-source, 100% local screen capture for macOS.</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.7</title>
+            <pubDate>Fr., 08 Mai 2026 10:57:10 +0000</pubDate>
+            <sparkle:version>1.0.7</sparkle:version>
+            <sparkle:shortVersionString>1.0.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+### Fixed
+- Screen recording produced an empty MP4 on Retina displays. `SCStreamConfiguration.sourceRect` is documented in points but the previous code passed it `SCDisplay.width / .height`, which are pixels — so on any 2× display SC was asked for a region twice the size of the display, returned zero frames, and AVAssetWriter wrote a header-only MP4. Fix: only set `sourceRect` for region recordings (the picker hands points) and let SC default to the full display for full-screen mode, with output dimensions in display pixels.
+- Stop button on the floating recording control bar didn't fire on the first click. Two compounding causes: `NSWindow` silently ignores `.nonactivatingPanel` (only `NSPanel` honours it), so AppKit was treating every mouseDown as a window-drag candidate; and `NSHostingView` returns `acceptsFirstMouse = false` by default, so the SwiftUI button's first click was swallowed by the window-activation path. Switched to `NSPanel` + a `FirstClickHostingView` subclass + `isMovableByWindowBackground = false` + `becomesKeyOnlyIfNeeded = true`. Esc also stops recording now.
+- Recording-failure errors logged silently instead of surfacing. Permission failures (Screen Recording, Microphone, Input Monitoring) now route through a context-specific `NSAlert` that names the missing permission, links straight to the relevant System Settings pane, and explains how to disable the feature in JuiceScreen if the user prefers not to grant it.
+- Floating control bar could be left as a zombie window when the recorder failed to start or stop. `RecordingSession` now starts the recorder before showing the bar and tears down the UI in `defer` regardless of how the stop-path resolves.
+
+### Known regression
+- Cursor highlight ring, click pulse, and keystroke overlay are temporarily not composited into recorded MP4s. The buffer-locking + `CGContext`-over-base-address approach was contributing to the empty-MP4 condition and was disabled to ship the recording fix. The compositor will be rebuilt as a Core Image pipeline (no buffer locking, no shared base-address writes) in a follow-up release. Recordings work cleanly without the overlays in the meantime.
+
+### Internal
+- `JuiceScreenUITests` runner: `ENABLE_HARDENED_RUNTIME = NO`. With ad-hoc signing on both the XCTRunner and the test bundle, neither side carries a Team ID; Hardened Runtime's library validation rejected the cross-load as "different Team IDs". Disabling HR for the test runner only is the standard workaround.
+- `LaunchSmokeTests` assertion: accepts `.runningBackground` (LSUIElement apps never enter foreground).
+- New `CapturePipelineE2ETests` suite: integration test wiring synthetic capture → `LibraryStoreLive` → `CaptureLibraryRecorder` → `AnnotationDocument` → `ExportService`. Covers the pipeline a real user hits without needing Screen Recording permission in CI. 260 unit tests in 63 suites total now pass.
+- Six `Sendable` / FileManager Swift-6 strict-concurrency warnings resolved by `@unchecked Sendable` on the wrapper structs (FileManager.default is documented thread-safe for our usage).
+- README: factual currency pass + post-stakeholder-review polish (new Security section, EdDSA key fingerprint, Sparkle verification recipe, threat-model paragraph, explicit gap list vs CleanShot, third-party dependency enumeration in License, contributor signal in Developing).]]></description>
+            <enclosure
+                url="https://github.com/mkupermann/JuiceScreen/releases/download/v1.0.7/JuiceScreen-1.0.7.dmg"
+                length="4220382"
+                type="application/octet-stream"
+                sparkle:edSignature="5CqBnqJbcFVg+1MzA+u5s3pwBmnGDyLqvF6P+j1X0OyiNw16u5WZOTuqk9gzcZul9VMpPuBxECGz1FQygVjXCw==" />
+        </item>
+        <item>
             <title>Version 1.0.5</title>
             <pubDate>Mi., 06 Mai 2026 16:31:19 +0000</pubDate>
             <sparkle:version>1.0.5</sparkle:version>
