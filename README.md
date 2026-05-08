@@ -16,7 +16,7 @@ Region, window, full-screen, and scrolling-area capture. Video recording with au
 
 The DMG is unsigned — there is no Apple Developer ID behind the project, so first launch needs a right-click → Open.
 
-**Status:** v1.0.6 — current release. v1.0.0 shipped install-broken on macOS 14.4+ (Sparkle framework signature mismatch); 1.0.1 fixed the bundling and 1.0.2 through 1.0.6 are user-facing fixes from real first-week use. Per-version detail in `docs/CHANGELOG.md`.
+**Status:** v1.0.5 is the latest published DMG; v1.0.6 is committed locally and in draft on GitHub but not yet released. v1.0.0 shipped install-broken on macOS 14.4+ (Sparkle framework signature mismatch); 1.0.1 fixed the bundling and 1.0.2 onward are user-facing fixes from real first-week use. Per-version detail in `docs/CHANGELOG.md`. Screen recording in 1.0.5 has known issues (empty MP4 on some Retina displays, control-bar Stop button intermittent) that are being fixed in the next release.
 
 ## Contents
 
