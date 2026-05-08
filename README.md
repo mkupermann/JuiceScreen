@@ -10,9 +10,9 @@
 
 ---
 
-CleanShot X already does most of this, well, and is proprietary. JuiceScreen is the open-source alternative — screen capture for macOS, running locally, with source you can read.
+If your daily flow is region capture → annotate → keep, and you'd like the captures indexed and searchable on your own machine, JuiceScreen covers that. If your daily flow is region capture → cloud upload → share-link, keep CleanShot — JuiceScreen has no upload story and no plan for one. The point is local files you can grep with OCR, not a hosted service.
 
-Region, window, full-screen, and scrolling-area capture. Video recording with audio. Annotation. A local library indexed by on-device OCR.
+Region, window, full-screen, and scrolling-area capture. Video recording with audio. Annotation. A local SQLite library indexed by on-device OCR. Open source, MIT, no telemetry.
 
 The DMG is unsigned — there is no Apple Developer ID behind the project, so first launch needs a right-click → Open.
 
@@ -30,6 +30,7 @@ The DMG is unsigned — there is no Apple Developer ID behind the project, so fi
   - [The library and OCR search](#the-library-and-ocr-search)
   - [Settings](#settings)
 - [Hotkey reference](#hotkey-reference)
+- [Security](#security)
 - [Privacy](#privacy)
 - [Known limitations](#known-limitations)
 - [Developing](#developing)
@@ -164,22 +165,47 @@ Inside the annotation editor:
 | Copy to clipboard | `⌘C` |
 | Save / Save As | `⌘S` / `⌘⇧S` |
 
+## Security
+
+Report security issues through GitHub's private vulnerability reporting on the repository (`Security` tab → `Report a vulnerability`). 90-day disclosure window unless an extension is requested.
+
+The DMG is unsigned and not notarized — see [Known limitations](#known-limitations). Updates are EdDSA-signed via [Sparkle](https://sparkle-project.org/); the public key is embedded in the app's `Info.plist`:
+
+```
+SUPublicEDKey: HZpQrkusoZ1yjxUM6xALA5TB72R9/ma5x/PgY3VDdIo=
+SUFeedURL:     https://mkupermann.github.io/JuiceScreen/appcast.xml
+```
+
+To verify the running app's embedded key matches this README, run inside `/Applications/JuiceScreen.app`:
+
+```bash
+plutil -extract SUPublicEDKey raw -o - Contents/Info.plist
+```
+
+If that string ever changes without a corresponding README change in the same release, do not accept the update.
+
 ## Privacy
 
-Two network calls:
+Two network calls and only two:
 
-1. Sparkle fetches the appcast XML from `https://mkupermann.github.io/JuiceScreen/appcast.xml` on launch and every 24 hours. Disable in Settings.
+1. Sparkle fetches the appcast XML from `https://mkupermann.github.io/JuiceScreen/appcast.xml` on launch and every 24 hours. Disable in Settings → About.
 2. Sparkle downloads a new DMG from `github.com` when you accept an update.
 
 No telemetry, no analytics, no crash reporter, no third-party SDKs. Verifiable with [Little Snitch](https://obdev.at/products/littlesnitch/) or [Lulu](https://objective-see.org/products/lulu.html) — filter on process name `JuiceScreen`; Sparkle traffic comes from the same process, not a helper.
 
 What the three TCC permissions do:
 
-- **Screen Recording**: frame data goes to local PNG / MP4 / PDF files in your save folder and to a local SQLite library at `~/Library/Application Support/JuiceScreen/`. Never transmitted.
+- **Screen Recording**: frame data goes to local PNG / MP4 / PDF files in your save folder and to a local SQLite library at `~/Library/Application Support/JuiceScreen/`. JuiceScreen never transmits this.
 - **Microphone**: only requested when microphone capture is enabled in Settings → Recording. PCM audio is multiplexed into the recording's MP4 container. Microphone capture only runs while a recording is active.
-- **Input Monitoring**: only requested when click pulse or keystroke overlay is enabled in Settings → Recording. Pointer-click locations and the last three keys pressed are read so the recorder can draw the overlay into the video frames. Held in process memory only, discarded when the recording session ends — nothing leaves the process.
+- **Input Monitoring**: only requested when click pulse or keystroke overlay is enabled in Settings → Recording. Pointer-click locations and the last three keys pressed are read so the recorder can draw the overlay into the video frames. Held in process memory only, discarded when the recording session ends — nothing leaves the process. The implementation lives in `JuiceScreen/Capture/Video/Recording/` and `JuiceScreen/Capture/Video/Cursor/`; the `KeystrokeTracker` source is auditable.
 
 For source-level verification: `grep -rEn 'URLSession|URLRequest' JuiceScreen/` returns zero matches in the app code. The only network entry point is Sparkle, configured in `Info.plist`.
+
+What this does **not** protect against:
+
+- Anything else that runs as your user on the same Mac can read the capture files in your save folder and the SQLite library — JuiceScreen's protection ends at the process boundary, not at filesystem ACLs.
+- Time Machine, iCloud Desktop / Documents sync, Backblaze, Carbon Copy Cloner, etc. will pick up the save folder and the library if you have those configured to include `~/Pictures/` or `~/Library/Application Support/`. JuiceScreen does not transmit; your backup tool might.
+- A malicious DMG hosted at the same GitHub Releases URL would still be rejected by Sparkle's EdDSA check on the appcast — but only if you took an update. The initial install is unsigned, so verify the SHA-256 in the release notes against the file you downloaded before the right-click → Open step.
 
 ## Known limitations
 
@@ -192,6 +218,14 @@ For source-level verification: `grep -rEn 'URLSession|URLRequest' JuiceScreen/` 
 - PDF export is rasterized. Vector PDF is on the v1.1 list.
 - The auto-update feed is served from GitHub Pages and can lag a new release by ~60 seconds.
 - Hotkey rebinding UI lands in v1.1; the Hotkeys settings tab is read-only in v1.0.
+
+What JuiceScreen deliberately does not do, and where the gaps are vs. CleanShot X / similar:
+
+- **No cloud upload, no shareable links.** The flow is `capture → file on disk → library`. There is no JuiceScreen-hosted destination, and adding one would change the project's local-first model.
+- **No GIF export in v1.0.** Recordings are MP4 only. GIF export is on the v1.1 list.
+- **No pinned / floating screenshots.** The annotation editor opens in a regular window; there is no "stick this to the screen above other windows" mode.
+- **No ProRes / HDR recording.** Recordings are H.264 8-bit at the rate selected in Settings.
+- **Not designed for managed-fleet deployment.** No notarized PKG, no Jamf / Munki recipe, no MDM-friendly default-off auto-update. JuiceScreen targets individual installs; fleet deploy is not a v1.x goal.
 
 ## Developing
 
@@ -240,18 +274,26 @@ JuiceScreen/
 
 For release packaging see `docs/RELEASE.md`. For per-release manual checks see `docs/QA-CHECKLIST.md`. The implementation specification lives at `docs/superpowers/specs/2026-05-04-juicescreen-design.md`.
 
+CI runs `xcodebuild test` on macOS via GitHub Actions (`.github/workflows/ci.yml`). PRs need to stay green there. Issues and PRs at <https://github.com/mkupermann/JuiceScreen/issues> — PRs are welcome on bug fixes, new annotation tools, and additional capture / export formats. Larger changes (new windows, schema migrations, anything that touches the capture pipeline) are easier to land if you open an issue first.
+
 ## License
 
 MIT — see `LICENSE`.
 
+Bundled third-party dependencies, all permissive:
+
+- [Sparkle](https://github.com/sparkle-project/Sparkle) — MIT, used for in-app updates.
+- [GRDB](https://github.com/groue/GRDB.swift) — MIT, used for the SQLite + FTS5 library store.
+- SQLite (system) — public domain, linked by the macOS SDK.
+
 ## Roadmap
 
-v1.1 targets — no committed dates:
+v1.1 is a wishlist, not a schedule — there is no paid maintainer behind this and no committed dates. Items below ship if and when there is time and (where noted) funding to ship them.
 
 - Vector PDF export (the v1.0 PDF is rasterized).
 - Horizontal scroll capture; sticky-header masking for the cases v1.0 ghosts on.
 - Optional iCloud library backup, off by default. The local-first model stays.
-- Notarization once an Apple Developer account is in place.
+- Notarization. Blocked on funding an Apple Developer account ($99/year). Once that's in place, the next minor release will ship a Developer-ID-signed and notarized DMG so first launch no longer needs the right-click → Open dance. Sponsoring this is the single biggest unlock for the project; reach out via the issue tracker if interested.
 - Hotkey rebinding UI in Settings.
 - Counter / numbered marker annotation tool.
 
