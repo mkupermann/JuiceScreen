@@ -267,6 +267,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } catch {
                 AppLog.logger(category: "App").error("Recording failed to start: \(String(describing: error))")
                 menuBar?.setRecordingIndicator(false)
+                presentRecordingFailure(error: error)
             }
         }
     }
@@ -281,16 +282,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func presentRecordingFailure(error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+
+        if let videoError = error as? VideoRecordingError {
+            switch videoError {
+            case .missingScreenRecordingPermission:
+                alert.messageText = "Screen Recording permission is required"
+                alert.informativeText = "Open System Settings → Privacy & Security → Screen Recording and turn on JuiceScreen, then quit and relaunch."
+                alert.addButton(withTitle: "Open Settings")
+                alert.addButton(withTitle: "Cancel")
+                if alert.runModal() == .alertFirstButtonReturn {
+                    permissions.openSettings(for: .screenRecording)
+                }
+                return
+            case .missingMicrophonePermission:
+                alert.messageText = "Microphone permission is required"
+                alert.informativeText = "You enabled microphone capture in Settings → Recording. Open System Settings → Privacy & Security → Microphone and turn on JuiceScreen, or disable mic capture in JuiceScreen Settings to record without it."
+                alert.addButton(withTitle: "Open Settings")
+                alert.addButton(withTitle: "Cancel")
+                if alert.runModal() == .alertFirstButtonReturn {
+                    permissions.openSettings(for: .microphone)
+                }
+                return
+            case .missingInputMonitoringPermission:
+                alert.messageText = "Input Monitoring permission is required"
+                alert.informativeText = "Click Pulse and / or Keystroke overlay are enabled in Settings → Recording — both need Input Monitoring. Either grant it in System Settings → Privacy & Security → Input Monitoring (and quit and relaunch JuiceScreen), or turn off both options in JuiceScreen's Recording settings."
+                alert.addButton(withTitle: "Open Settings")
+                alert.addButton(withTitle: "Cancel")
+                if alert.runModal() == .alertFirstButtonReturn {
+                    permissions.openSettings(for: .inputMonitoring)
+                }
+                return
+            default:
+                break
+            }
+        }
+
+        alert.messageText = "Recording could not start"
+        alert.informativeText = "\(error)"
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
     private func handleRecordScreen() {
         if recordingSessionManager.isActive {
             stopRecording()
         } else {
             startRecording()
         }
-    }
-
-    private func todoLog(_ what: String) {
-        log.info("TODO: \(what) action — implemented in a later plan")
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
