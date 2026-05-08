@@ -3,7 +3,7 @@ import Foundation
 /// Computes (and creates on first access) the JuiceScreen library paths under
 /// `~/Library/Application Support/JuiceScreen/`. Tests can inject a different
 /// `rootDirectory` to redirect into a temp directory.
-public struct LibraryPaths: Sendable {
+public struct LibraryPaths: @unchecked Sendable {
 
     private let rootDirectoryOverride: URL?
     private let fileManager: FileManager

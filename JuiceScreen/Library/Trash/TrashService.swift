@@ -2,7 +2,7 @@ import Foundation
 
 /// Manages move-to-trash, restore, and permanent-delete for capture files
 /// under `<captureRoot>/.trash/<captureID>/<basename>`.
-public struct TrashService: Sendable {
+public struct TrashService: @unchecked Sendable {
 
     private let captureRoot: URL
     private let fileManager: FileManager

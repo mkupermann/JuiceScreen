@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-public struct ThumbnailStore: Sendable {
+public struct ThumbnailStore: @unchecked Sendable {
 
     private let paths: LibraryPaths
     private let fileManager: FileManager
