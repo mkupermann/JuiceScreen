@@ -111,4 +111,82 @@ struct KeystrokeTrackerTests {
         #expect(a != differentLabel)
         #expect(a != differentTimestamp)
     }
+
+    @Test("maxKeys cap with all-fresh keys keeps only the most recent N")
+    func capWithAllFreshKeys() {
+        let tracker = KeystrokeTracker(maxKeys: 2)
+        let now = Date()
+        // Inject 5 keys all within the lifetime window.
+        tracker._injectKeyForTesting(.init(label: "1", timestamp: now.addingTimeInterval(-2.0)))
+        tracker._injectKeyForTesting(.init(label: "2", timestamp: now.addingTimeInterval(-1.5)))
+        tracker._injectKeyForTesting(.init(label: "3", timestamp: now.addingTimeInterval(-1.0)))
+        tracker._injectKeyForTesting(.init(label: "4", timestamp: now.addingTimeInterval(-0.5)))
+        tracker._injectKeyForTesting(.init(label: "5", timestamp: now))
+
+        let keys = tracker.recentKeys(now: now)
+        #expect(keys.map { $0.label } == ["4", "5"])
+    }
+
+    @Test("purgeLocked: mixed old + fresh keys with cap drops old then enforces cap")
+    func mixedOldFreshOverCap() {
+        let tracker = KeystrokeTracker(maxKeys: 3)
+        let now = Date()
+        // 2 old (beyond lifetime) + 4 fresh.
+        tracker._injectKeyForTesting(.init(label: "old1", timestamp: now.addingTimeInterval(-10)))
+        tracker._injectKeyForTesting(.init(label: "old2", timestamp: now.addingTimeInterval(-5)))
+        tracker._injectKeyForTesting(.init(label: "f1", timestamp: now.addingTimeInterval(-2.0)))
+        tracker._injectKeyForTesting(.init(label: "f2", timestamp: now.addingTimeInterval(-1.5)))
+        tracker._injectKeyForTesting(.init(label: "f3", timestamp: now.addingTimeInterval(-1.0)))
+        tracker._injectKeyForTesting(.init(label: "f4", timestamp: now))
+
+        let keys = tracker.recentKeys(now: now)
+        #expect(keys.map { $0.label } == ["f2", "f3", "f4"])
+    }
+
+    @Test("now: boundary — within 2.5s kept, just past purged")
+    func nowBoundary() {
+        let tracker = KeystrokeTracker(maxKeys: 5)
+        let injected = Date()
+        tracker._injectKeyForTesting(.init(label: "k", timestamp: injected))
+
+        // Within the lifetime window (2.4s elapsed): kept.
+        let withinKeys = tracker.recentKeys(now: injected.addingTimeInterval(2.4))
+        #expect(withinKeys.map { $0.label } == ["k"])
+
+        // Just past the lifetime window (2.6s elapsed): purged.
+        let pastKeys = tracker.recentKeys(now: injected.addingTimeInterval(2.6))
+        #expect(pastKeys.isEmpty)
+    }
+
+    @Test("init(maxKeys: 0) drops all injected keys")
+    func zeroMaxKeys() {
+        let tracker = KeystrokeTracker(maxKeys: 0)
+        let now = Date()
+        tracker._injectKeyForTesting(.init(label: "x", timestamp: now))
+
+        #expect(tracker.recentKeys(now: now).isEmpty)
+    }
+
+    @Test("Self.lifetime equals 2.5 seconds")
+    func lifetimeConstant() {
+        #expect(KeystrokeTracker.lifetime == 2.5)
+    }
+
+    @Test("Multiple stop() calls in a row are safe")
+    func multipleStopCalls() {
+        let tracker = KeystrokeTracker()
+        tracker.stop()
+        tracker.stop()
+        tracker.stop()
+        #expect(tracker.recentKeys().isEmpty)
+    }
+
+    @Test("recentKeys() with default now returns recently-injected key")
+    func recentKeysDefaultNow() {
+        let tracker = KeystrokeTracker()
+        tracker._injectKeyForTesting(.init(label: "fresh", timestamp: Date()))
+
+        let keys = tracker.recentKeys()
+        #expect(keys.map { $0.label } == ["fresh"])
+    }
 }
