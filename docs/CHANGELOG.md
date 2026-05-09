@@ -2,6 +2,17 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.1.0] — 2026-05-09
+
+### Added
+- **Cursor highlight, click pulse, and keystroke overlay are back in recorded MP4s.** The compositor was disabled in 1.0.7 because the previous CGContext-over-pixel-buffer approach (lock base address → draw → unlock) intermittently corrupted the captured frame and produced empty MP4s. Rebuilt as a Core Image pipeline (`CIImage(cvPixelBuffer:)` + `CISourceOverCompositing` over a separately-allocated overlay bitmap, rendered into a fresh `CVPixelBuffer` from a pool). The captured source buffer is **never** locked for write and **never** drawn into — only read. Single failed frame falls back to the unmodified source buffer, so a compositor failure can't blank the recording.
+- Latent y-coord bug in the old compositor is fixed in the new path: cursor and click overlays now appear at the same vertical position the user sees on screen. The old code drew at `screen.y` in CG (bottom-up) coordinates, which would have rendered the ring vertically mirrored from where it should have been (this never shipped to users — the compositor was disabled before the bug was visible).
+
+### Internal
+- New `FrameCompositor.composite(_:options:screenOrigin:) -> CVPixelBuffer?` API. Returns `nil` as a pass-through signal when no overlay flags are enabled, so the recorder skips the copy entirely; also returns `nil` on internal failure so the caller can fall back to the original buffer.
+- 5 new tests covering: pass-through nil, fresh-buffer return, cursor-ring-pixel sample, no-mutation-of-source guarantee, screenOrigin offset correctness. The fresh-buffer-identity test guards against the original 1.0.5/1.0.6 bug class regressing.
+- Existing `draw(options:frameSize:screenOrigin:in:)` API preserved — older callers and the existing renderer-coverage tests continue to work unchanged.
+
 ## [1.0.8] — 2026-05-09
 
 ### Internal
