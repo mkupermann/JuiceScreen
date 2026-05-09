@@ -134,4 +134,51 @@ struct VideoRecorderLiveTests {
         #expect(recorder.elapsed == 0)
         #expect(recorder.isRecording == false)
     }
+
+    @Test("region mode: permission denied throws before SCStream setup")
+    func regionModeDeniedScreenRecording() async {
+        let perms = FakePermissionsService(initial: [.screenRecording: .denied])
+        let recorder = VideoRecorderLive(permissions: perms)
+        let region = CGRect(x: 0, y: 0, width: 200, height: 100)
+        do {
+            try await recorder.start(mode: .region(region), options: .defaults, outputURL: outputURL)
+            Issue.record("Expected throw")
+        } catch let error as VideoRecordingError {
+            #expect(error == .missingScreenRecordingPermission)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("captureMicrophone + showClickPulse together: the FIRST denied permission wins (microphone)")
+    func firstDeniedWinsMicrophone() async {
+        let perms = FakePermissionsService(initial: [
+            .screenRecording: .granted,
+            .microphone: .denied,        // checked first
+            .inputMonitoring: .denied,   // would also fail, but order matters
+        ])
+        let recorder = VideoRecorderLive(permissions: perms)
+        var opts = VideoRecordingOptions.defaults
+        opts.captureMicrophone = true
+        opts.showClickPulse = true
+        do {
+            try await recorder.start(mode: .fullScreen, options: opts, outputURL: outputURL)
+            Issue.record("Expected throw")
+        } catch let error as VideoRecordingError {
+            // Source checks microphone before input monitoring → microphone error wins.
+            #expect(error == .missingMicrophonePermission)
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+    }
+
+    @Test("isRecording remains false across multiple failed starts")
+    func multipleFailedStartsKeepStateFalse() async {
+        let perms = FakePermissionsService(initial: [.screenRecording: .denied])
+        let recorder = VideoRecorderLive(permissions: perms)
+        for _ in 1 ... 3 {
+            try? await recorder.start(mode: .fullScreen, options: .defaults, outputURL: outputURL)
+        }
+        #expect(recorder.isRecording == false)
+    }
 }
