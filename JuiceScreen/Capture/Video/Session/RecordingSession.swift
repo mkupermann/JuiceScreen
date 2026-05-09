@@ -33,6 +33,15 @@ public final class RecordingSession {
         // hovering over the screen with a broken stop button.
         try await recorder.start(mode: mode, options: options, outputURL: outputURL)
 
+        // Skip UI in unit-test runs. The floating control bar is an NSPanel +
+        // NSHostingView; when leaked across tests its 200ms tick timer keeps
+        // re-laying-out the SwiftUI tree, and under code-coverage timing the
+        // constraint solver intermittently exceeds the per-window pass cap and
+        // crashes XCTRunSession. Production app launches set neither variable.
+        let isTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || ProcessInfo.processInfo.environment["JUICESCREEN_UI_TEST_MODE"] != nil
+        guard !isTesting else { return }
+
         // Recorder is live — show the floating control bar.
         let win = RecordingControlWindow(
             initialMicEnabled: micEnabled,
