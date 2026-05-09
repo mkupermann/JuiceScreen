@@ -2,6 +2,15 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.0.8] — 2026-05-09
+
+### Internal
+- Test-suite hardening: gated eager UI bootstrapping in `AppDelegate` and `RecordingSession` behind the existing `XCTestConfigurationFilePath` guard. Under code-coverage instrumentation the test-host's leaked `RecordingControlWindow` (NSPanel + NSHostingView with a 200ms tick timer) intermittently exceeded `_postWindowNeedsUpdateConstraints`'s per-window pass cap and crashed `XCTRunSession` with `NSGenericException`. Coverage-on flake rate observed across 30+ sequential runs: 43% → 0%. The previous `main` CI run was failing for this exact reason (148 of 257 tests reported before exit-65 crash); CI is now green.
+- Test count: 260 → 372. Suites: 63 → 73. App-target line coverage 26.83% → 32.26%. Files pushed to 100%: `EditorState`, `CursorTracker`, `KeystrokeOverlayRenderer`, `BlurEffect`, `RecordingSessionManager`. Files newly covered: `CaptureLibraryRecorder` (96.5%), `TrimmerServiceLive` (86.8%), `ScreenCaptureKitHelpers`, `ClickTracker`, `QuickActions`, `OCRBackfill`, `VideoRecorderLive` (permission paths only — `SCStream` requires real screen access).
+
+### End-user behaviour
+- Unchanged from 1.0.7. The production-source diff is 14 lines, all behind `isTesting` env-var guards that are never set outside `xcodebuild test`. The 1.0.8 DMG is functionally identical to the 1.0.7 DMG; the version bump exists to give the test-suite hardening work a release boundary.
+
 ## [1.0.7] — 2026-05-08
 
 ### Fixed
