@@ -196,7 +196,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         registerHotkeys(prefs: prefs, actions: actions)
 
-        if ProcessInfo.processInfo.environment["JUICESCREEN_UI_TEST_MODE"] == nil {
+        // Skip first-run coordinator + window in any test mode (unit OR UI). The
+        // window is the only NSHostingView constructed eagerly at launch; under
+        // code-coverage instrumentation its constraint solver intermittently
+        // exceeds the per-window update-pass cap and crashes the test runner.
+        if !isTesting {
             let coordinator = FirstRunCoordinator(permissions: permissions, preferences: preferences)
             firstRun = coordinator
             coordinator.start()
