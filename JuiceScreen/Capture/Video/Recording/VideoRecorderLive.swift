@@ -246,17 +246,19 @@ private final class StreamOutput: NSObject, SCStreamDelegate, SCStreamOutput, @u
             log.info("First video sample: \(w)x\(h), expected frame=\(Int(self.frameSize.width))x\(Int(self.frameSize.height))")
         }
 
-        // Skip the compositor for now — it locks the pixel buffer, draws via a
-        // CGContext over its base address, then unlocks. Any glitch there
-        // (wrong row stride, wrong colour space, simultaneous read by AVAssetWriter)
-        // can leave the buffer in a state where `videoAdaptor.append` rejects it
-        // and the resulting MP4 is empty. v1.0.x ships without overlays in the
-        // recording until the compositor is rebuilt to draw via Core Image
-        // (which composes safely without locking the underlying buffer).
-        // _ = compositor   // keep the reference live
-
+        // Composite overlays via Core Image (rebuilt in 1.1.0). The new path
+        // never locks the captured buffer's base address — overlays are drawn
+        // into a separately-allocated bitmap, composited via CISourceOverCompositing,
+        // and the result is rendered to a fresh CVPixelBuffer from a pool. Returns
+        // nil when no overlay flags are enabled OR on internal failure; in either
+        // case we fall back to the original captured buffer (unchanged) so a
+        // single failed frame can never blank the recording.
         let pts = CMSampleBufferGetPresentationTimeStamp(sb)
-        writer.appendVideo(pixelBuffer: pixelBuffer, presentationTime: pts)
+        if let composited = compositor.composite(pixelBuffer, options: options, screenOrigin: screenOrigin) {
+            writer.appendVideo(pixelBuffer: composited, presentationTime: pts)
+        } else {
+            writer.appendVideo(pixelBuffer: pixelBuffer, presentationTime: pts)
+        }
     }
 
     private var framesReceived: Int = 0
