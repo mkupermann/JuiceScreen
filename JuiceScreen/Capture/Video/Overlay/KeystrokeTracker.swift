@@ -47,6 +47,11 @@ public final class KeystrokeTracker: @unchecked Sendable {
             NSEvent.removeMonitor(m)
             monitor = nil
         }
+        // Don't leave the last keystrokes sitting in the long-lived agent's memory
+        // after the recording session ends.
+        lock.lock()
+        keys.removeAll()
+        lock.unlock()
     }
 
     public func recentKeys(now: Date = Date()) -> [Key] {

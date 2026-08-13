@@ -93,9 +93,17 @@ struct StorageTab: View {
 
             let trashed = try await store.list(filter: .trash)
             let trashService = TrashService(captureRoot: prefs.saveDirectory)
+            let ocrSidecarStore = OCRSidecarStore(paths: paths)
+            let thumbnailStore = ThumbnailStore(paths: paths)
             for row in trashed {
                 let url = URL(fileURLWithPath: row.filePath)
                 try? trashService.permanentlyDelete(trashedFile: url)
+                // These live outside the capture folder, keyed by UUID, so the
+                // trash sweep above never touches them. The OCR sidecar is a full
+                // text transcript of the captured screen — removing it is the point
+                // of "remove the underlying files".
+                try? ocrSidecarStore.delete(for: row.uuid)
+                try? thumbnailStore.delete(for: row.uuid)
             }
             _ = try await store.emptyTrash()
             await reloadStats()

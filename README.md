@@ -195,7 +195,7 @@ No telemetry, no analytics, no crash reporter, no third-party SDKs. Verifiable w
 
 What the three TCC permissions do:
 
-- **Screen Recording**: frame data goes to local PNG / MP4 / PDF files in your save folder and to a local SQLite library at `~/Library/Application Support/JuiceScreen/`. JuiceScreen never transmits this.
+- **Screen Recording**: frame data goes to local PNG / MP4 / PDF files in your save folder and to a local SQLite library at `~/Library/Application Support/JuiceScreen/`. Alongside the database, each capture gets a thumbnail (`thumbnails/<uuid>.jpg`) and, for images, an OCR text sidecar (`ocr/<uuid>.json`) that holds the recognized on-screen text used for search. Emptying the trash removes all three — media, thumbnail, and OCR sidecar. JuiceScreen never transmits any of it.
 - **Microphone**: only requested when microphone capture is enabled in Settings → Recording. PCM audio is multiplexed into the recording's MP4 container. Microphone capture only runs while a recording is active.
 - **Input Monitoring**: only requested when click pulse or keystroke overlay is enabled in Settings → Recording. Pointer-click locations and the last three keys pressed are read so the recorder can draw the overlay into the video frames. Be aware of what this means: with the keystroke overlay on, the keys you press are rendered into the recording and are therefore visible in the saved MP4 — that is the point of the feature. They are not written to any separate log, not added to the OCR/search index, and not transmitted. The tracker keeps only the last three keys in memory during the session. The implementation lives in `JuiceScreen/Capture/Video/Overlay/` (`KeystrokeTracker`, `ClickTracker`, `CursorTracker`); the source is auditable.
 
