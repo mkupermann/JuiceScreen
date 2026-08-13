@@ -28,5 +28,8 @@ Package.resolved
 *.zip
 appcast/appcast.xml.bak
 
-# Sparkle private key — never commit
+# Sparkle private key + any local secrets — never commit
 sparkle_keys/
+secrets/
+*.pem
+*-private-key.txt
