@@ -197,7 +197,7 @@ What the three TCC permissions do:
 
 - **Screen Recording**: frame data goes to local PNG / MP4 / PDF files in your save folder and to a local SQLite library at `~/Library/Application Support/JuiceScreen/`. JuiceScreen never transmits this.
 - **Microphone**: only requested when microphone capture is enabled in Settings → Recording. PCM audio is multiplexed into the recording's MP4 container. Microphone capture only runs while a recording is active.
-- **Input Monitoring**: only requested when click pulse or keystroke overlay is enabled in Settings → Recording. Pointer-click locations and the last three keys pressed are read so the recorder can draw the overlay into the video frames. Held in process memory only, discarded when the recording session ends — nothing leaves the process. The implementation lives in `JuiceScreen/Capture/Video/Recording/` and `JuiceScreen/Capture/Video/Cursor/`; the `KeystrokeTracker` source is auditable.
+- **Input Monitoring**: only requested when click pulse or keystroke overlay is enabled in Settings → Recording. Pointer-click locations and the last three keys pressed are read so the recorder can draw the overlay into the video frames. Be aware of what this means: with the keystroke overlay on, the keys you press are rendered into the recording and are therefore visible in the saved MP4 — that is the point of the feature. They are not written to any separate log, not added to the OCR/search index, and not transmitted. The tracker keeps only the last three keys in memory during the session. The implementation lives in `JuiceScreen/Capture/Video/Overlay/` (`KeystrokeTracker`, `ClickTracker`, `CursorTracker`); the source is auditable.
 
 For source-level verification: `grep -rEn 'URLSession|URLRequest' JuiceScreen/` returns zero matches in the app code. The only network entry point is Sparkle, configured in `Info.plist`.
 
@@ -240,7 +240,7 @@ open JuiceScreen.xcodeproj
 
 The `.xcodeproj` is regenerated from `project.yml` and is not committed. Edit `project.yml`, not the generated project.
 
-Tests (260 unit tests in 63 suites + a UI smoke test; runs in ~2 seconds on M-series):
+Tests (377 unit tests in 71 suites + a UI smoke test; runs in ~2 seconds on M-series):
 
 ```bash
 xcodebuild test -scheme JuiceScreen -destination 'platform=macOS'
