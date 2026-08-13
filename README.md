@@ -14,9 +14,9 @@ If your daily flow is region capture → annotate → keep, and you'd like the c
 
 Region, window, full-screen, and scrolling-area capture. Video recording with audio. Annotation. A local SQLite library indexed by on-device OCR. Open source, MIT, no telemetry.
 
-The DMG is unsigned — there is no Apple Developer ID behind the project, so first launch needs a right-click → Open.
+The DMG is Developer ID signed and notarized by Apple, so first launch is a normal double-click — no right-click → Open dance.
 
-**Status:** v1.0.5 is the latest published DMG; v1.0.6 is committed locally and in draft on GitHub but not yet released. v1.0.0 shipped install-broken on macOS 14.4+ (Sparkle framework signature mismatch); 1.0.1 fixed the bundling and 1.0.2 onward are user-facing fixes from real first-week use. Per-version detail in `docs/CHANGELOG.md`. Screen recording in 1.0.5 has known issues (empty MP4 on some Retina displays, control-bar Stop button intermittent) that are being fixed in the next release.
+**Status:** v1.1.1 — signed and notarized, macOS 14+. Per-version detail in `docs/CHANGELOG.md`.
 
 ## Contents
 
@@ -49,11 +49,18 @@ The DMG is unsigned — there is no Apple Developer ID behind the project, so fi
 
 1. Download `JuiceScreen-X.Y.Z.dmg` from [Releases](https://github.com/mkupermann/JuiceScreen/releases).
 2. Open the DMG and drag `JuiceScreen.app` to `/Applications`.
-3. Right-click `JuiceScreen.app` → **Open** → confirm. On macOS 14.4 and later, macOS redirects you to **System Settings → Privacy & Security → Open Anyway** — that confirmation is required for every unsigned app.
+3. Double-click to open. The app is signed and notarized, so Gatekeeper lets it through without the right-click → Open step.
 4. Grant Screen Recording permission when the first capture is triggered.
 5. The first-run wizard covers the rest.
 
-Notarization needs a paid Apple Developer account; the project does not have one. Updates after the first install are verified via Sparkle's EdDSA signing.
+If you want to verify the signature yourself before opening:
+
+```bash
+spctl -a -vvv /Applications/JuiceScreen.app   # → accepted, source=Notarized Developer ID
+codesign -dv --verbose=4 /Applications/JuiceScreen.app 2>&1 | grep TeamIdentifier   # → TeamIdentifier=8K23FDC4TM
+```
+
+Updates after the first install are additionally verified via Sparkle's EdDSA signing.
 
 ## Tutorial
 
@@ -169,7 +176,7 @@ Inside the annotation editor:
 
 Report security issues through GitHub's private vulnerability reporting on the repository (`Security` tab → `Report a vulnerability`). 90-day disclosure window unless an extension is requested.
 
-The DMG is unsigned and not notarized — see [Known limitations](#known-limitations). Updates are EdDSA-signed via [Sparkle](https://sparkle-project.org/); the public key is embedded in the app's `Info.plist`:
+The DMG is Developer ID signed and notarized by Apple (Team `8K23FDC4TM`); verify with `spctl -a -vvv` as shown in [Installing](#installing). Updates are additionally EdDSA-signed via [Sparkle](https://sparkle-project.org/); the public key is embedded in the app's `Info.plist`:
 
 ```
 SUPublicEDKey: HZpQrkusoZ1yjxUM6xALA5TB72R9/ma5x/PgY3VDdIo=
@@ -205,11 +212,10 @@ What this does **not** protect against:
 
 - Anything else that runs as your user on the same Mac can read the capture files in your save folder and the SQLite library — JuiceScreen's protection ends at the process boundary, not at filesystem ACLs.
 - Time Machine, iCloud Desktop / Documents sync, Backblaze, Carbon Copy Cloner, etc. will pick up the save folder and the library if you have those configured to include `~/Pictures/` or `~/Library/Application Support/`. JuiceScreen does not transmit; your backup tool might.
-- A malicious DMG hosted at the same GitHub Releases URL would still be rejected by Sparkle's EdDSA check on the appcast — but only if you took an update. The initial install is unsigned, so verify the SHA-256 in the release notes against the file you downloaded before the right-click → Open step.
+- A malicious DMG hosted at the same GitHub Releases URL would be rejected by Sparkle's EdDSA check on the appcast — but only for updates. The initial install is protected by Apple notarization instead; Gatekeeper verifies the Developer ID signature and notarization ticket on first launch. If you still want to check the download by hand, the SHA-256 is in the release notes.
 
 ## Known limitations
 
-- The DMG is unsigned. First launch needs the right-click → Open step in the [Installing](#installing) section. On macOS 14.4 and later, this redirects you to **System Settings → Privacy & Security → Open Anyway** — that step is required, not optional.
 - macOS 14 minimum.
 - No iCloud sync. By design — the library stays on the local machine.
 - macOS 15 may re-prompt for Screen Recording permission roughly weekly. Apple's behaviour, not configurable from inside the app.
@@ -225,7 +231,7 @@ What JuiceScreen deliberately does not do, and where the gaps are vs. CleanShot 
 - **No GIF export in v1.0.** Recordings are MP4 only. GIF export is on the v1.1 list.
 - **No pinned / floating screenshots.** The annotation editor opens in a regular window; there is no "stick this to the screen above other windows" mode.
 - **No ProRes / HDR recording.** Recordings are H.264 8-bit at the rate selected in Settings.
-- **Not designed for managed-fleet deployment.** No notarized PKG, no Jamf / Munki recipe, no MDM-friendly default-off auto-update. JuiceScreen targets individual installs; fleet deploy is not a v1.x goal.
+- **Not designed for managed-fleet deployment.** No Jamf / Munki recipe, no MDM-friendly default-off auto-update. JuiceScreen targets individual installs; fleet deploy is not a v1.x goal.
 
 ## Developing
 
@@ -293,7 +299,6 @@ v1.1 is a wishlist, not a schedule — there is no paid maintainer behind this a
 - Vector PDF export (the v1.0 PDF is rasterized).
 - Horizontal scroll capture; sticky-header masking for the cases v1.0 ghosts on.
 - Optional iCloud library backup, off by default. The local-first model stays.
-- Notarization. Blocked on funding an Apple Developer account ($99/year). Once that's in place, the next minor release will ship a Developer-ID-signed and notarized DMG so first launch no longer needs the right-click → Open dance. Sponsoring this is the single biggest unlock for the project; reach out via the issue tracker if interested.
 - Hotkey rebinding UI in Settings.
 - Counter / numbered marker annotation tool.
 
