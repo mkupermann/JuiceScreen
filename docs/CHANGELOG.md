@@ -2,6 +2,19 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.1.1] — 2026-08-13
+
+### Added
+- **Signed and notarized.** The DMG is now Developer ID signed and notarized by Apple, so first launch no longer needs the right-click → Open step — double-click to open like any other app.
+
+### Fixed
+- **Privacy: deletes now remove the OCR sidecar and thumbnail.** Emptying the trash (and permanent delete) previously removed the capture media but left two UUID-keyed files behind forever, both outside the capture folder: the OCR text sidecar (`ocr/<uuid>.json`, a full transcript of the captured screen) and the thumbnail. Both are now removed. `permanentlyDelete` also left the capture's OCR text in the FTS5 index and still searchable; it now clears the index too.
+- A startup sweep (`OrphanReaper`) removes OCR sidecars and thumbnails orphaned by earlier versions. Fail-safe: it only runs against a set of known capture IDs from a query that succeeded.
+- `KeystrokeTracker` clears its in-memory key buffer when a recording stops, instead of leaving the last keys in the long-lived agent's memory.
+
+### Internal
+- Added `SECURITY.md` and `CONTRIBUTING.md`. New tests: `OrphanReaper` (3) and an FTS-purge test for `permanentlyDelete`.
+
 ## [1.1.0] — 2026-05-09
 
 ### Added

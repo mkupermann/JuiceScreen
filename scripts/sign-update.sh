@@ -34,9 +34,16 @@ if [[ -z "$SIGN_UPDATE" ]]; then
     exit 1
 fi
 
-# Sign. Keychain mode by default; stdin override when SPARKLE_ED_KEY is set.
+# Sign. Keychain mode by default; SPARKLE_ED_KEY override writes the key to a
+# temp file and uses --ed-key-file (current Sparkle sign_update dropped the old
+# --ed-key-stdin / -s inline-key options).
 if [[ -n "${SPARKLE_ED_KEY:-}" ]]; then
-    SIGNATURE_LINE="$(printf '%s' "$SPARKLE_ED_KEY" | "$SIGN_UPDATE" --ed-key-stdin "$DMG_PATH")"
+    KEYFILE="$(mktemp)"
+    trap 'rm -f "$KEYFILE"' EXIT
+    printf '%s' "$SPARKLE_ED_KEY" > "$KEYFILE"
+    SIGNATURE_LINE="$("$SIGN_UPDATE" --ed-key-file "$KEYFILE" "$DMG_PATH")"
+    rm -f "$KEYFILE"
+    trap - EXIT
 else
     SIGNATURE_LINE="$("$SIGN_UPDATE" "$DMG_PATH")"
 fi
