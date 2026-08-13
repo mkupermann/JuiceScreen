@@ -180,6 +180,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             await backfill.run()
         }
 
+        // Background: remove OCR sidecars + thumbnails orphaned by earlier deletes.
+        // Older builds deleted the capture media but left these UUID-keyed files
+        // (the OCR sidecar is a full transcript of the captured screen) behind.
+        // Fail-safe: only sweep with a set of known IDs from a query that succeeded.
+        Task.detached { [libraryStore, libraryPaths] in
+            do {
+                let live = try await libraryStore.list(filter: .all)
+                let trashed = try await libraryStore.list(filter: .trash)
+                let known = Set((live + trashed).map(\.uuid))
+                let removed = try OrphanReaper(paths: libraryPaths).sweep(knownIDs: known)
+                if removed > 0 {
+                    AppLog.logger(category: "App").info("OrphanReaper removed \(removed) stale OCR/thumbnail files")
+                }
+            } catch {
+                AppLog.logger(category: "App").error("OrphanReaper failed: \(String(describing: error))")
+            }
+        }
+
         let actions = MenuBarActions(
             captureRegion:     { [weak self] in self?.fireCapture(.region) },
             captureWindow:     { [weak self] in self?.fireCapture(.window) },

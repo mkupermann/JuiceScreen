@@ -70,6 +70,21 @@ public final class LibraryStoreLive: LibraryStore {
 
     public func permanentlyDelete(id: UUID) async throws {
         try await databaseQueue.write { db in
+            // Mirror emptyTrash's per-row cleanup: a plain DELETE FROM captures
+            // leaves the capture's OCR text in the FTS5 index, still searchable.
+            if let rowid = try Int64.fetchOne(db,
+                sql: "SELECT rowid FROM captures WHERE uuid = ?",
+                arguments: [id.uuidString]) {
+                if let oldText = try String.fetchOne(db,
+                    sql: "SELECT ocr_text FROM captures_ocr_cache WHERE uuid = ?",
+                    arguments: [id.uuidString]) {
+                    try db.execute(sql: """
+                        INSERT INTO captures_fts(captures_fts, rowid, uuid, ocr_text, source_app)
+                        VALUES ('delete', ?, ?, ?, ?)
+                    """, arguments: [rowid, id.uuidString, oldText, ""])
+                }
+                try db.execute(sql: "DELETE FROM captures_ocr_cache WHERE uuid = ?", arguments: [id.uuidString])
+            }
             try db.execute(
                 sql: "DELETE FROM captures WHERE uuid = ?",
                 arguments: [id.uuidString]
