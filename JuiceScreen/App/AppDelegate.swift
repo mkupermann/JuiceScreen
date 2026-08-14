@@ -200,6 +200,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let actions = MenuBarActions(
             captureRegion:     { [weak self] in self?.fireCapture(.region) },
+            captureFreeform:   { [weak self] in self?.fireCapture(.freeform) },
             captureWindow:     { [weak self] in self?.fireCapture(.window) },
             captureFullScreen: { [weak self] in self?.fireCapture(.fullScreen) },
             captureLastRegion: { [weak self] in self?.fireCapture(.lastRegion) },
@@ -228,6 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func registerHotkeys(prefs: Preferences, actions: MenuBarActions) {
         hotkeyService.register(prefs.captureRegionHotkey,     for: .captureRegion)     { actions.captureRegion() }
+        hotkeyService.register(prefs.captureFreeformHotkey,   for: .captureFreeform)   { actions.captureFreeform() }
         hotkeyService.register(prefs.captureWindowHotkey,     for: .captureWindow)     { actions.captureWindow() }
         hotkeyService.register(prefs.captureFullScreenHotkey, for: .captureFullScreen) { actions.captureFullScreen() }
         hotkeyService.register(prefs.captureLastRegionHotkey, for: .captureLastRegion) { actions.captureLastRegion() }

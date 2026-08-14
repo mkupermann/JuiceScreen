@@ -5,6 +5,7 @@ import AppKit
 @MainActor
 public struct MenuBarActions {
     public var captureRegion: () -> Void
+    public var captureFreeform: () -> Void
     public var captureWindow: () -> Void
     public var captureFullScreen: () -> Void
     public var captureLastRegion: () -> Void
@@ -15,6 +16,7 @@ public struct MenuBarActions {
     public var quit: () -> Void
 
     public init(captureRegion: @escaping () -> Void,
+                captureFreeform: @escaping () -> Void,
                 captureWindow: @escaping () -> Void,
                 captureFullScreen: @escaping () -> Void,
                 captureLastRegion: @escaping () -> Void,
@@ -24,6 +26,7 @@ public struct MenuBarActions {
                 openPreferences: @escaping () -> Void,
                 quit: @escaping () -> Void) {
         self.captureRegion = captureRegion
+        self.captureFreeform = captureFreeform
         self.captureWindow = captureWindow
         self.captureFullScreen = captureFullScreen
         self.captureLastRegion = captureLastRegion
@@ -45,6 +48,9 @@ public enum MenuBarMenuBuilder {
         menu.addItem(item("Capture Region",
                           shortcut: KeyCodeFormatter.string(for: prefs.captureRegionHotkey),
                           action: actions.captureRegion))
+        menu.addItem(item("Capture Freeform",
+                          shortcut: KeyCodeFormatter.string(for: prefs.captureFreeformHotkey),
+                          action: actions.captureFreeform))
         menu.addItem(item("Capture Window",
                           shortcut: KeyCodeFormatter.string(for: prefs.captureWindowHotkey),
                           action: actions.captureWindow))

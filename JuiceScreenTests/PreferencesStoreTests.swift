@@ -145,4 +145,15 @@ struct PreferencesStoreTests {
         #expect(defaults.object(forKey: "updateLastCheckedAt") == nil)
         #expect(store.load().updateLastCheckedAt == nil)
     }
+
+    @Test("captureFreeformHotkey defaults to Cmd+Shift+7 and round-trips")
+    func freeformHotkeyDefaultAndRoundTrip() {
+        let (store, _) = makeEphemeralStore()
+        #expect(store.load().captureFreeformHotkey == Hotkey(keyCode: 26, modifiers: [.command, .shift]))
+
+        var prefs = store.load()
+        prefs.captureFreeformHotkey = Hotkey(keyCode: 26, modifiers: [.command, .option])
+        store.save(prefs)
+        #expect(store.load().captureFreeformHotkey == Hotkey(keyCode: 26, modifiers: [.command, .option]))
+    }
 }
