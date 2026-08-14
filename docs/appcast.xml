@@ -8,8 +8,29 @@
         <description>Open-source, 100% local screen capture for macOS.</description>
         <language>en</language>
         <item>
+            <title>Version 1.1.2</title>
+            <pubDate>Fri, 14 Aug 2026 07:53:56 +0000</pubDate>
+            <sparkle:version>1.1.2</sparkle:version>
+            <sparkle:shortVersionString>1.1.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+### Fixed
+- **Region screenshots captured the wrong part of the screen.** The region picker hands back the selection in AppKit's global coordinate space, whose origin is the bottom-left of the main display. ScreenCaptureKit's `sourceRect` is display-local with the origin at the **top-left**. The code subtracted the display's origin but never flipped the y axis, so the captured band ended up mirrored about the display's horizontal centre — select near the top of the screen and you got the bottom. Affects "Capture Region" and "Capture Last Region".
+- **Scroll capture had the same defect, plus one more.** It passed the picker's global rect straight into `sourceRect` without subtracting the display origin at all, and always streamed from `displays.first` regardless of which display the selection was on. It now resolves the display containing the selection's centre and converts the rect properly.
+
+### Internal
+- The bottom-left → top-left conversion now lives in one pure function, `ScreenCaptureKitHelpers.displayLocalTopLeft(globalBL:displayFrame:)`, instead of being inlined per call site. The display lookup helpers (`display(containing:in:)`, `globalFrame(of:)`) moved there too and are no longer duplicated private methods on `CaptureEngineLive`.
+- 8 new tests covering both display edges, a full-display selection, displays stacked above the main one, displays with negative origins on both axes, a round-trip against the picker's own conversion, and an explicit regression test against the naive origin-subtraction the fix replaces. 389 tests across 76 suites.
+- `VideoRecordingMode.region` documents the coordinate space it expects. No caller constructs it yet — the menu records full screen — so the same class of bug was latent there rather than live.]]></description>
+            <enclosure
+                url="https://github.com/mkupermann/JuiceScreen/releases/download/v1.1.2/JuiceScreen-1.1.2.dmg"
+                length="4341275"
+                type="application/octet-stream"
+                sparkle:edSignature="BE27F5b4RCWlpIb+VUx9k+3ubvS2WKxnat/ZBjr8BhFwEvZthZ/e79wdBVYox9sKqQY3VllJoDcwS01cg7VdDg==" />
+        </item>
+        <item>
             <title>Version 1.1.1</title>
-            <pubDate>Do., 13 Aug. 2026 12:01:38 +0000</pubDate>
+            <pubDate>Thu, 13 Aug 2026 12:01:38 +0000</pubDate>
             <sparkle:version>1.1.1</sparkle:version>
             <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -32,7 +53,7 @@
         </item>
         <item>
             <title>Version 1.0.7</title>
-            <pubDate>Fr., 08 Mai 2026 10:57:10 +0000</pubDate>
+            <pubDate>Fri, 08 May 2026 10:57:10 +0000</pubDate>
             <sparkle:version>1.0.7</sparkle:version>
             <sparkle:shortVersionString>1.0.7</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -60,7 +81,7 @@
         </item>
         <item>
             <title>Version 1.0.5</title>
-            <pubDate>Mi., 06 Mai 2026 16:31:19 +0000</pubDate>
+            <pubDate>Wed, 06 May 2026 16:31:19 +0000</pubDate>
             <sparkle:version>1.0.5</sparkle:version>
             <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -75,7 +96,7 @@
         </item>
         <item>
             <title>Version 1.0.3</title>
-            <pubDate>Mi., 06 Mai 2026 16:02:32 +0000</pubDate>
+            <pubDate>Wed, 06 May 2026 16:02:32 +0000</pubDate>
             <sparkle:version>1.0.3</sparkle:version>
             <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -93,7 +114,7 @@
         </item>
         <item>
             <title>Version 1.0.2</title>
-            <pubDate>Mi., 06 Mai 2026 14:30:10 +0000</pubDate>
+            <pubDate>Wed, 06 May 2026 14:30:10 +0000</pubDate>
             <sparkle:version>1.0.2</sparkle:version>
             <sparkle:shortVersionString>1.0.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -112,7 +133,7 @@
         </item>
         <item>
             <title>Version 1.0.1</title>
-            <pubDate>Mi., 06 Mai 2026 10:57:52 +0000</pubDate>
+            <pubDate>Wed, 06 May 2026 10:57:52 +0000</pubDate>
             <sparkle:version>1.0.1</sparkle:version>
             <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -133,7 +154,7 @@
         </item>
         <item>
             <title>Version 1.0.0</title>
-            <pubDate>Mi., 06 Mai 2026 10:35:50 +0000</pubDate>
+            <pubDate>Wed, 06 May 2026 10:35:50 +0000</pubDate>
             <sparkle:version>1.0.0</sparkle:version>
             <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>

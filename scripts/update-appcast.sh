@@ -25,7 +25,9 @@ fi
 
 VERSION="$(cat VERSION)"
 APPCAST="docs/appcast.xml"
-DATE="$(date -u +"%a, %d %b %Y %H:%M:%S +0000")"
+# RFC-822 requires English day/month abbreviations. Without LC_ALL=C a German
+# locale emits "Fr., 14 Aug. 2026", which is not a valid RSS pubDate.
+DATE="$(LC_ALL=C date -u +"%a, %d %b %Y %H:%M:%S +0000")"
 MIN_OS="14.0"
 
 if grep -q "<sparkle:version>${VERSION}</sparkle:version>" "$APPCAST"; then
