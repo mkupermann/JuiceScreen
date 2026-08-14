@@ -8,6 +8,8 @@ struct EditorView: View {
         VStack(spacing: 0) {
             EditorToolbar(state: state, actions: actions)
             ZStack(alignment: .topLeading) {
+                CheckerboardBackground()
+                    .frame(width: canvasPointSize.width, height: canvasPointSize.height)
                 AnnotationCanvas(baseImage: state.document.baseImage,
                                  layers: state.document.layers,
                                  canvasSize: canvasPointSize)
