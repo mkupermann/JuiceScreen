@@ -54,36 +54,23 @@ jobs:
       - name: Build app
         run: bash scripts/build-release.sh
 
-      - name: Make DMG
-        run: bash scripts/make-dmg.sh
-
-      - name: Compute DMG metadata
-        id: dmg
+      - name: Run tests
         run: |
-          VERSION="$(cat VERSION)"
-          DMG="build/JuiceScreen-${VERSION}.dmg"
-          SHA="$(shasum -a 256 "$DMG" | awk '{print $1}')"
-          SIZE="$(stat -f %z "$DMG")"
-          echo "version=$VERSION"     >> "$GITHUB_OUTPUT"
-          echo "dmg=$DMG"              >> "$GITHUB_OUTPUT"
-          echo "sha256=$SHA"           >> "$GITHUB_OUTPUT"
-          echo "size=$SIZE"            >> "$GITHUB_OUTPUT"
+          xcodebuild test \
+            -project JuiceScreen.xcodeproj \
+            -scheme JuiceScreen \
+            -destination 'platform=macOS' \
+            -only-testing:JuiceScreenTests \
+            | xcbeautify
 
-      - name: Create draft release + upload DMG
-        uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          name: "JuiceScreen ${{ steps.dmg.outputs.version }}"
-          tag_name: ${{ github.ref_name }}
-          files: ${{ steps.dmg.outputs.dmg }}
-          body: |
-            ## JuiceScreen ${{ steps.dmg.outputs.version }}
-
-            This is a draft release. Maintainer must:
-            1. Download the DMG attached below.
-            2. Locally run `SPARKLE_ED_KEY=... scripts/sign-update.sh <dmg>` to get the EdDSA signature.
-            3. Locally run `scripts/update-appcast.sh <signature> <length> <download-url>` and commit the appcast change.
-            4. Edit this draft release: paste the changelog, click **Publish**.
-
-            **DMG sha256:** `${{ steps.dmg.outputs.sha256 }}`
-            **DMG size:**   `${{ steps.dmg.outputs.size }}` bytes
+      - name: Release artefacts are built locally, not here
+        run: |
+          echo "This workflow verifies that the tagged commit builds and its tests pass."
+          echo "It deliberately produces no DMG and creates no release."
+          echo
+          echo "GitHub runners have no access to the Developer ID certificate, so anything"
+          echo "built here is ad-hoc signed — Gatekeeper blocks it on other people's Macs."
+          echo "Publishing such a DMG would ship exactly the problem v1.1.1 removed."
+          echo
+          echo "The shipped DMG is built on the maintainer's Mac: Developer ID signed,"
+          echo "notarised, stapled, then EdDSA-signed for Sparkle. See docs/RELEASE.md."

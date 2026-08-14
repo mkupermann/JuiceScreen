@@ -51,7 +51,42 @@ xcodebuild test -scheme JuiceScreen -destination 'platform=macOS' -only-testing:
 4. Run the QA checklist: `docs/QA-CHECKLIST.md`. Don't skip it.
 5. Commit: `chore: bump VERSION to 1.0.1 + changelog`.
 
-### 3. Tag and push
+### 3. Build, notarise, staple — on your Mac
+
+The shipped DMG is built here, never in CI. GitHub runners have no access to the
+Developer ID certificate, so anything built there is ad-hoc signed and Gatekeeper
+blocks it on other people's Macs. `.github/workflows/release.yml` therefore only
+verifies that the tagged commit builds and its tests pass; it produces no DMG and
+creates no release.
+
+`scripts/build-release.sh` picks up the Developer ID identity from your keychain
+automatically and enables Hardened Runtime plus a secure timestamp. Confirm the
+version in the built bundle before submitting — if you bumped `MARKETING_VERSION`
+without re-running `xcodegen generate`, the archive still carries the old one:
+
+```bash
+scripts/build-release.sh
+/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' build/JuiceScreen.app/Contents/Info.plist   # must match VERSION
+
+# Notarise the app, then staple the ticket into the bundle.
+ditto -c -k --keepParent build/JuiceScreen.app build/JuiceScreen-app.zip
+xcrun notarytool submit build/JuiceScreen-app.zip --keychain-profile juicescreen --wait
+xcrun stapler staple build/JuiceScreen.app
+spctl -a -vvv -t install build/JuiceScreen.app        # expect: accepted, source=Notarized Developer ID
+rm -f build/JuiceScreen-app.zip
+
+# Wrap it, sign the DMG itself, notarise and staple that too.
+scripts/make-dmg.sh
+codesign --force --sign "Developer ID Application: Michael Kupermann (8K23FDC4TM)" --timestamp build/JuiceScreen-1.0.1.dmg
+xcrun notarytool submit build/JuiceScreen-1.0.1.dmg --keychain-profile juicescreen --wait
+xcrun stapler staple build/JuiceScreen-1.0.1.dmg
+spctl -a -vvv -t install build/JuiceScreen-1.0.1.dmg
+```
+
+Stapling rewrites the file, so **the EdDSA signature must come after it**. Sign
+earlier and you publish a DMG whose Sparkle signature no longer matches its bytes.
+
+### 4. Tag and push
 
 ```bash
 git tag v1.0.1
@@ -59,17 +94,12 @@ git push origin main
 git push origin v1.0.1
 ```
 
-The push triggers `.github/workflows/release.yml`. Wait ~10 minutes for it to build the DMG.
-
-### 4. Sign + appcast (local)
-
-After the workflow finishes:
+### 5. Sign + appcast (local)
 
 ```bash
-# Download the draft DMG from the Releases page → "Assets"
-DMG=~/Downloads/JuiceScreen-1.0.1.dmg
+DMG=build/JuiceScreen-1.0.1.dmg
 
-# Sign it with the private key (must be in env)
+# Sign the stapled DMG with the private key (keychain by default)
 SIGOUT="$(scripts/sign-update.sh "$DMG")"
 SIG="$(echo "$SIGOUT" | grep edSignature | cut -d= -f2)"
 LEN="$(echo "$SIGOUT" | grep length      | cut -d= -f2)"
@@ -86,13 +116,28 @@ git push origin main
 
 GitHub Pages picks up the new appcast within ~60 seconds.
 
-### 5. Publish the GitHub Release
+### 6. Publish the GitHub Release
 
-1. Open the draft release on GitHub.
-2. Paste the changelog section under "Release notes".
-3. Click **Publish release**.
+Upload the same stapled, EdDSA-signed DMG you just referenced in the appcast —
+its byte size must equal the `length` in the enclosure, or Sparkle silently
+refuses the update.
 
-### 6. Smoke
+```bash
+gh release create v1.0.1 build/JuiceScreen-1.0.1.dmg \
+    --title "JuiceScreen 1.0.1" \
+    --latest \
+    --notes "$(awk '/^## \[/{n++; if (n==2) exit; next} n==1' docs/CHANGELOG.md)"
+```
+
+Verify what the public will actually download:
+
+```bash
+gh release download v1.0.1 --pattern '*.dmg' --dir /tmp --clobber
+spctl -a -vvv -t install /tmp/JuiceScreen-1.0.1.dmg   # accepted, source=Notarized Developer ID
+xcrun stapler validate /tmp/JuiceScreen-1.0.1.dmg
+```
+
+### 7. Smoke
 
 1. On a different Mac (or a fresh user account on yours), launch JuiceScreen 1.0.0.
 2. Wait for the auto-update prompt, OR Settings → About → Check for Updates Now.
