@@ -36,6 +36,19 @@ final class OverlayPickerHost<Payload> {
     private var builder: ContentBuilder?
 
     func pick(content: @escaping ContentBuilder) async throws -> Result {
+        // Global hotkeys keep firing while the overlay is up, so a second pick
+        // is one keystroke away. Without this guard it overwrote `continuation`
+        // (hanging the first task forever, and logging a checked-continuation
+        // leak) and `escMonitor` (leaking a monitor that outlived its overlays
+        // and then fired against an empty `overlays`). The live pick wins.
+        //
+        // Both halves of the state are checked, not just the continuation:
+        // `overlays` is populated synchronously below, whereas `continuation`
+        // is only assigned once the suspension point is reached.
+        guard continuation == nil, overlays.isEmpty else {
+            throw CaptureError.userCancelled
+        }
+
         let screens = NSScreen.screens
         guard !screens.isEmpty else {
             throw CaptureError.noDisplaysAvailable
@@ -87,7 +100,7 @@ final class OverlayPickerHost<Payload> {
         escMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             guard let self else { return event }
             if event.keyCode == 53 { // Escape
-                self.commit(nil, on: self.activeScreen ?? self.overlays.first!.screen)
+                self.cancel()
                 return nil
             }
             return event
@@ -106,10 +119,19 @@ final class OverlayPickerHost<Payload> {
     private func commit(_ payload: Payload?, on screen: NSScreen) {
         guard continuation != nil else { return }   // already finished
         guard let payload else {
-            finish(.failure(CaptureError.userCancelled))
+            cancel()
             return
         }
         finish(.success(Result(payload: payload, screen: screen)))
+    }
+
+    /// Cancelling needs no screen. The screen only travels with a *successful*
+    /// pick, and a failure discards it — asking for one anyway is what made the
+    /// Esc path force-unwrap `overlays.first`, which trapped whenever the
+    /// monitor outlived its overlays.
+    private func cancel() {
+        guard continuation != nil else { return }   // already finished
+        finish(.failure(CaptureError.userCancelled))
     }
 
     private func finish(_ outcome: Swift.Result<Result, Error>) {
