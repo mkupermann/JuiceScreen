@@ -15,23 +15,37 @@ public final class ScrollCaptureServiceLive: NSObject, ScrollCaptureService {
 
     public override init() { super.init() }
 
+    /// `region` is in global bottom-left screen coordinates, exactly as
+    /// `RegionPickerController.pickRegion()` returns it.
     public func start(region: CGRect, handler: @escaping FrameHandler) async throws {
         guard !isRunning else { return }
 
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        guard let display = content.displays.first else {
+        // Pick the display holding the selection's centre, not just the first one —
+        // on a multi-display setup the region rarely lives on displays[0].
+        let center = CGPoint(x: region.midX, y: region.midY)
+        guard let display = ScreenCaptureKitHelpers.display(containing: center, in: content)
+                ?? content.displays.first else {
             throw ScrollCaptureError.streamConfigurationFailed("No displays available")
         }
 
+        // sourceRect is display-local and top-left origin; the picker's rect is
+        // global and bottom-left origin. Without the flip the captured band sits
+        // mirrored about the display's horizontal centre.
+        let sourceRect = ScreenCaptureKitHelpers.displayLocalTopLeft(
+            globalBL: region,
+            displayFrame: ScreenCaptureKitHelpers.globalFrame(of: display)
+        )
+
         let pixelDensity = 2
         let cfg = SCStreamConfiguration()
-        cfg.width = Int(region.width) * pixelDensity
-        cfg.height = Int(region.height) * pixelDensity
+        cfg.width = Int(sourceRect.width) * pixelDensity
+        cfg.height = Int(sourceRect.height) * pixelDensity
         cfg.minimumFrameInterval = CMTime(value: 1, timescale: 10)   // 10fps target
         cfg.queueDepth = 4
         cfg.pixelFormat = kCVPixelFormatType_32BGRA
         cfg.showsCursor = false
-        cfg.sourceRect = region
+        cfg.sourceRect = sourceRect
 
         let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
         let output = StreamOutput(handler: handler)

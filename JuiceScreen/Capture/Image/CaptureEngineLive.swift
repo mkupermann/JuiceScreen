@@ -43,16 +43,15 @@ public final class CaptureEngineLive: CaptureEngine {
         }
 
         let content = try await ScreenCaptureKitHelpers.shareableContent()
-        guard let display = displayContaining(point: CGPoint(x: regionInScreen.midX, y: regionInScreen.midY),
-                                              in: content) else {
+        guard let display = ScreenCaptureKitHelpers.display(
+            containing: CGPoint(x: regionInScreen.midX, y: regionInScreen.midY),
+            in: content
+        ) else {
             throw CaptureError.regionOutsideDisplays
         }
-        let displayFrame = displayGlobalFrame(display)
-        let displayLocal = CGRect(
-            x: regionInScreen.minX - displayFrame.minX,
-            y: regionInScreen.minY - displayFrame.minY,
-            width: regionInScreen.width,
-            height: regionInScreen.height
+        let displayLocal = ScreenCaptureKitHelpers.displayLocalTopLeft(
+            globalBL: regionInScreen,
+            displayFrame: ScreenCaptureKitHelpers.globalFrame(of: display)
         )
 
         let filter = SCContentFilter(
@@ -72,18 +71,18 @@ public final class CaptureEngineLive: CaptureEngine {
 
         // Find which display contains the selection's center.
         let content = try await ScreenCaptureKitHelpers.shareableContent()
-        guard let display = displayContaining(point: CGPoint(x: regionInScreen.midX, y: regionInScreen.midY),
-                                              in: content) else {
+        guard let display = ScreenCaptureKitHelpers.display(
+            containing: CGPoint(x: regionInScreen.midX, y: regionInScreen.midY),
+            in: content
+        ) else {
             throw CaptureError.regionOutsideDisplays
         }
 
-        // Convert global-screen coordinates to display-local coordinates for sourceRect.
-        let displayFrame = displayGlobalFrame(display)
-        let displayLocal = CGRect(
-            x: regionInScreen.minX - displayFrame.minX,
-            y: regionInScreen.minY - displayFrame.minY,
-            width: regionInScreen.width,
-            height: regionInScreen.height
+        // The picker hands back global bottom-left coordinates; sourceRect wants
+        // display-local top-left. See displayLocalTopLeft(globalBL:displayFrame:).
+        let displayLocal = ScreenCaptureKitHelpers.displayLocalTopLeft(
+            globalBL: regionInScreen,
+            displayFrame: ScreenCaptureKitHelpers.globalFrame(of: display)
         )
 
         let filter = SCContentFilter(
@@ -100,24 +99,6 @@ public final class CaptureEngineLive: CaptureEngine {
         preferences.save(prefs)
 
         return try await persist(cg: cg, captureType: .region, sourceApp: nil, scaleFactor: backingScaleFactor(for: display))
-    }
-
-    /// Returns the SCDisplay whose global frame contains `point`, or nil.
-    private func displayContaining(point: CGPoint, in content: SCShareableContent) -> SCDisplay? {
-        return content.displays.first { display in
-            displayGlobalFrame(display).contains(point)
-        }
-    }
-
-    /// SCDisplay frames are in display-local coordinates; combine with `frame` from the matching NSScreen
-    /// to get global screen coordinates. We match by `displayID` (CGDirectDisplayID).
-    private func displayGlobalFrame(_ display: SCDisplay) -> CGRect {
-        if let nsScreen = NSScreen.screens.first(where: { screen in
-            (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID) == display.displayID
-        }) {
-            return nsScreen.frame
-        }
-        return CGRect(x: 0, y: 0, width: display.width, height: display.height)
     }
 
     // MARK: - Full screen

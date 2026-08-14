@@ -2,6 +2,17 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [1.1.2] — 2026-08-14
+
+### Fixed
+- **Region screenshots captured the wrong part of the screen.** The region picker hands back the selection in AppKit's global coordinate space, whose origin is the bottom-left of the main display. ScreenCaptureKit's `sourceRect` is display-local with the origin at the **top-left**. The code subtracted the display's origin but never flipped the y axis, so the captured band ended up mirrored about the display's horizontal centre — select near the top of the screen and you got the bottom. Affects "Capture Region" and "Capture Last Region".
+- **Scroll capture had the same defect, plus one more.** It passed the picker's global rect straight into `sourceRect` without subtracting the display origin at all, and always streamed from `displays.first` regardless of which display the selection was on. It now resolves the display containing the selection's centre and converts the rect properly.
+
+### Internal
+- The bottom-left → top-left conversion now lives in one pure function, `ScreenCaptureKitHelpers.displayLocalTopLeft(globalBL:displayFrame:)`, instead of being inlined per call site. The display lookup helpers (`display(containing:in:)`, `globalFrame(of:)`) moved there too and are no longer duplicated private methods on `CaptureEngineLive`.
+- 8 new tests covering both display edges, a full-display selection, displays stacked above the main one, displays with negative origins on both axes, a round-trip against the picker's own conversion, and an explicit regression test against the naive origin-subtraction the fix replaces. 389 tests across 76 suites.
+- `VideoRecordingMode.region` documents the coordinate space it expects. No caller constructs it yet — the menu records full screen — so the same class of bug was latent there rather than live.
+
 ## [1.1.1] — 2026-08-13
 
 ### Added
