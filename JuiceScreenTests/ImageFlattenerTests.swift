@@ -91,4 +91,53 @@ struct ImageFlattenerTests {
         #expect(right.g > 240)
         #expect(right.b > 240)
     }
+
+    /// Opaque, alpha-free input must never enter the flatten path at all.
+    /// Pre-fix, `onWhite` unconditionally redrew every image into a Device
+    /// RGB context, so an sRGB-tagged opaque image would come out Device
+    /// RGB — a colour-space identity change with no purpose, since nothing
+    /// needed flattening. Post-fix, the alpha gate returns it untouched.
+    @Test("Opaque image is returned untouched, in its own colour space")
+    func opaqueImageIsReturnedUntouchedInItsOwnColorSpace() {
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+        let ctx = CGContext(
+            data: nil, width: 20, height: 20,
+            bitsPerComponent: 8, bytesPerRow: 0,
+            space: srgb,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+        )!
+        ctx.setFillColor(CGColor(colorSpace: srgb, components: [0.2, 0.6, 0.4, 1])!)
+        ctx.fill(CGRect(x: 0, y: 0, width: 20, height: 20))
+        let opaqueImage = NSImage(cgImage: ctx.makeImage()!, size: NSSize(width: 20, height: 20))
+
+        let flat = ImageFlattener.onWhite(opaqueImage)
+        let resultSpace = flat.cgImage(forProposedRect: nil, context: nil, hints: nil)!.colorSpace
+        #expect(resultSpace?.name == CGColorSpace.sRGB)
+    }
+
+    /// Flattening alpha-carrying input must preserve the source's colour
+    /// space rather than hardcoding Device RGB — that hardcoding is wrong
+    /// for the wide-gamut profiles real captures carry once they gain alpha.
+    @Test("Flattened output keeps the source's colour space")
+    func flattenedOutputKeepsSourceColorSpace() {
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+        let ctx = CGContext(
+            data: nil, width: 20, height: 20,
+            bitsPerComponent: 8, bytesPerRow: 0,
+            space: srgb,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+        ctx.setFillColor(CGColor(colorSpace: srgb, components: [1, 0, 0, 1])!)
+        ctx.fill(CGRect(x: 0, y: 0, width: 10, height: 20))
+        let halfTransparentSRGBImage = NSImage(cgImage: ctx.makeImage()!, size: NSSize(width: 20, height: 20))
+
+        let flat = ImageFlattener.onWhite(halfTransparentSRGBImage)
+        let resultCG = flat.cgImage(forProposedRect: nil, context: nil, hints: nil)!
+        #expect(resultCG.colorSpace?.name == CGColorSpace.sRGB)
+        let right = pixel(flat, x: 15, y: 10)
+        #expect(right.r == 255)
+        #expect(right.g == 255)
+        #expect(right.b == 255)
+        #expect(right.a == 255)
+    }
 }
