@@ -28,6 +28,7 @@ public struct Preferences: Equatable, Sendable {
     public var recordScreenHotkey: Hotkey
     public var openLibraryHotkey: Hotkey
     public var captureScrollHotkey: Hotkey
+    public var captureFreeformHotkey: Hotkey
 
     public var hotkeysPaused: Bool
     public var lastRegion: CGRect?
@@ -50,7 +51,7 @@ public struct Preferences: Equatable, Sendable {
             saveDirectory: saveDir,
             defaultStillFormat: .png,
             jpegQuality: 0.9,
-            // virtual keycodes per Carbon: 21=4, 19=2, 20=3, 15=R, 23=5, 37=L, 22=6
+            // virtual keycodes per Carbon: 21=4, 19=2, 20=3, 15=R, 23=5, 37=L, 22=6, 26=7
             captureRegionHotkey:     Hotkey(keyCode: 21, modifiers: [.command, .shift]),
             captureWindowHotkey:     Hotkey(keyCode: 19, modifiers: [.command, .shift]),
             captureFullScreenHotkey: Hotkey(keyCode: 20, modifiers: [.command, .shift]),
@@ -58,6 +59,7 @@ public struct Preferences: Equatable, Sendable {
             recordScreenHotkey:      Hotkey(keyCode: 23, modifiers: [.command, .shift]),
             openLibraryHotkey:       Hotkey(keyCode: 37, modifiers: [.command, .shift]),
             captureScrollHotkey:     Hotkey(keyCode: 22, modifiers: [.command, .shift]),
+            captureFreeformHotkey:   Hotkey(keyCode: 26, modifiers: [.command, .shift]),
             hotkeysPaused: false,
             lastRegion: nil,
             recordingOptions: .defaults,
