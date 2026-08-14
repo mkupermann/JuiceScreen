@@ -24,6 +24,7 @@ The DMG is Developer ID signed and notarized by Apple, so first launch is a norm
 - [Installing](#installing)
 - [Tutorial](#tutorial)
   - [Capture a region and annotate it](#capture-a-region-and-annotate-it)
+  - [Capture a freeform shape](#capture-a-freeform-shape)
   - [Record a video of the screen](#record-a-video-of-the-screen)
   - [Trim a recording](#trim-a-recording)
   - [Capture a scrolling area](#capture-a-scrolling-area)
@@ -39,7 +40,7 @@ The DMG is Developer ID signed and notarized by Apple, so first launch is a norm
 
 ## What it does
 
-- Capture region (`⌘⇧4`), full-screen (`⌘⇧3`), window, last region (`⌘⇧R`), or a scrolling area (`⌘⇧6`).
+- Capture region (`⌘⇧4`), full-screen (`⌘⇧3`), window, last region (`⌘⇧R`), a scrolling area (`⌘⇧6`), or a freeform shape (`⌘⇧7`) — drawn freehand or as a polygon, saved as a PNG with everything outside the shape transparent.
 - Record full-screen video (`⌘⇧5`) at 30 or 60 fps. System audio plus microphone on separate tracks. Optional cursor highlight ring, click pulse, and keystroke overlay (the latter two require Input Monitoring — see [Privacy](#privacy) for what is read and where it goes).
 - Trim recordings post-record. Two-handle scrubber; exports a new MP4 at the chosen range.
 - Annotate with 11 tools and undo/redo. Save as PNG, JPG, or rasterized PDF.
@@ -79,6 +80,20 @@ The most common workflow.
 7. Press `⌘C` to copy the annotated image to the clipboard, `⌘S` to save in place, or `⌘⇧S` to save somewhere else (PNG, JPG, or PDF).
 
 To **edit an existing annotation**, switch to the Select tool (`V`), click the layer you want to change, and use the controls in the contextual row. Color, thickness, fill, text content, font and blur intensity all update in place. Drag the selected layer to move it. `⌘Z` and `⌘⇧Z` undo and redo. `Delete` removes the selected layer.
+
+### Capture a freeform shape
+
+When a rectangle is the wrong shape — a dialog with rounded corners, a chart without its surrounding page, a face to lift out of a photo.
+
+1. Press `⌘⇧7`. The screen dims exactly as it does for a region capture. A hint at the bottom names the active mode.
+2. **Freehand** is the default. Hold the mouse down and trace the outline you want. Release to confirm — the path closes itself from the last point back to the first, so you do not have to land precisely where you started.
+3. For straight edges, press `Tab` **before placing the first point** to switch to **polygon** mode. Each click sets a vertex. `Backspace` removes the last one. `Return` or a double-click closes the shape.
+4. `Esc` cancels in either mode.
+5. The annotation editor opens with the captured shape. A checkerboard behind the image shows you what is transparent — that pattern is part of the editor only and never lands in an exported file.
+
+The saved PNG is cropped to the shape's bounding box, with everything outside the outline fully transparent. Since JPEG and PDF cannot store transparency, exporting to either composites the transparent area onto **white** rather than the black AppKit would otherwise produce. The same applies to the thumbnail in the library grid. Copying with `⌘C` puts a PNG on the clipboard, so transparency survives into anything that accepts one.
+
+Fewer than three points is not a shape: `Return` in polygon mode simply does nothing until there are enough, leaving what you have drawn intact.
 
 ### Record a video of the screen
 
@@ -149,6 +164,7 @@ Six tabs, all backed by the same `~/Library/Preferences/com.bks-lab.juicescreen.
 | Capture window | (menu bar → Capture → Window) |
 | Capture last region | `⌘⇧R` |
 | Capture scrolling area | `⌘⇧6` |
+| Capture freeform shape | `⌘⇧7` |
 | Record screen | `⌘⇧5` |
 | Open library | `⌘⇧L` |
 | Open Settings | (menu bar → Settings) |

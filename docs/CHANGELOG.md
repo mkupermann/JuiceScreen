@@ -2,6 +2,22 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Added
+- **FreeForm capture (`⌘⇧7`).** Draw the shape you want instead of a rectangle. Freehand by default — hold the mouse down and trace — or press `Tab` before placing the first point to switch to polygon mode, where each click sets a vertex and `Return` or a double-click closes the shape. `Backspace` removes the last vertex, `Esc` cancels. The result is a PNG cropped to the shape's bounding box with everything outside the shape fully transparent.
+- The annotation editor now shows a checkerboard behind the image, so a transparent area is distinguishable from a white one. It is part of the editor's view only and never appears in an exported file.
+
+### Fixed
+- **Scroll capture grabbed the wrong band, and the wrong display.** It passed the picker's rect straight into ScreenCaptureKit without converting from AppKit's global bottom-left space into the display-local top-left space `sourceRect` expects, and it always streamed from the first display regardless of where the selection was. Same class of bug as the region defect fixed in 1.1.2, one layer down.
+- **JPG and PDF exports, and library thumbnails, no longer render transparent areas black.** AppKit's default when flattening alpha is black; every lossy path now composites onto white explicitly. Opaque captures are untouched — the flattening only runs for images that actually carry an alpha channel, so existing captures keep both their old code path and their colour profile.
+
+### Internal
+- The bottom-left ↔ top-left conversion now exists once, in `ScreenCaptureKitHelpers`, in both directions and used by every picker and capture path. The multi-display overlay plumbing moved out of `RegionPickerController` into a generic `OverlayPickerHost`, which now drives both the region and freeform pickers.
+- Double-click-to-close is detected by our own `DoubleClickDetector` rather than a SwiftUI `TapGesture(count: 2)`, which competed with the freehand drag recognizer and could append two coincident vertices or fail to close at all.
+- `OverlayPickerHost` refuses re-entry while a pick is in flight. Previously a second capture hotkey press with the overlay open orphaned the Esc monitor and leaked the continuation, and the orphaned monitor then crashed on the next `Esc` anywhere in the app. Inherited from the pre-refactor picker; fixed once, for both.
+- 389 → 428 tests across 76 → 81 suites.
+
 ## [1.1.2] — 2026-08-14
 
 ### Fixed
