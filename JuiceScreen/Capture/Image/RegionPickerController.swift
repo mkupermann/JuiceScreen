@@ -112,14 +112,9 @@ public final class RegionPickerController {
             finish(.failure(.userCancelled))
             return
         }
-        let frame = screen.frame   // BL global
-        // Local TL → BL local: y_BL = screen.height - (y_TL + height)
-        let blLocalY = frame.height - (localRect.minY + localRect.height)
-        let globalRect = CGRect(
-            x: localRect.minX + frame.minX,
-            y: blLocalY + frame.minY,
-            width: localRect.width,
-            height: localRect.height
+        let globalRect = ScreenCaptureKitHelpers.globalBottomLeft(
+            localTL: localRect,
+            screenFrame: screen.frame
         )
         finish(.success(globalRect))
     }
