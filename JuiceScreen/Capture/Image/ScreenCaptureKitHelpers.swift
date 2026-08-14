@@ -48,6 +48,28 @@ public enum ScreenCaptureKitHelpers {
         )
     }
 
+    /// Whether a window is one of our own picker overlays, and must therefore be
+    /// kept out of the capture.
+    ///
+    /// The obvious-looking alternative — building the filter with
+    /// `excludingApplications:` — removes **every** window we own, so a region
+    /// drawn over our own editor or library captured whatever happened to be
+    /// behind that window instead of the window itself. The selection looked
+    /// correct and the resulting image showed a different part of the screen,
+    /// which is a far more confusing failure than a dim overlay would have been.
+    ///
+    /// The overlays are the only windows we place at `NSWindow.Level.screenSaver`
+    /// (1000), so the level distinguishes them from the editor (0) and the
+    /// menu-bar status item (25) without needing to track window IDs.
+    public static func isPickerOverlayWindow(
+        bundleIdentifier: String?,
+        windowLayer: Int,
+        ownBundleIdentifier: String
+    ) -> Bool {
+        guard let bundleIdentifier, bundleIdentifier == ownBundleIdentifier else { return false }
+        return windowLayer >= Int(NSWindow.Level.screenSaver.rawValue)
+    }
+
     /// Returns the SCDisplay whose global frame contains `point`, or nil.
     /// `point` is in global bottom-left screen coordinates.
     @MainActor
