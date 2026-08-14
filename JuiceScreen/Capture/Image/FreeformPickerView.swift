@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// One overlay's interactive surface for freeform selection.
@@ -14,6 +15,7 @@ struct FreeformPickerView: View {
 
     @State private var selection = FreeformSelection(mode: .freehand)
     @State private var cursor: CGPoint?
+    @State private var doubleClickDetector = DoubleClickDetector()
 
     var body: some View {
         GeometryReader { proxy in
@@ -50,7 +52,6 @@ struct FreeformPickerView: View {
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
             .contentShape(Rectangle())
             .gesture(freehandGesture)
-            .onTapGesture(count: 2) { closeIfPossible() }
             .simultaneousGesture(polygonTap)
             .onContinuousHover { phase in
                 if case .active(let point) = phase { cursor = point } else { cursor = nil }
@@ -110,13 +111,30 @@ struct FreeformPickerView: View {
             }
     }
 
+    // Double-click-to-close is detected here rather than with a SwiftUI
+    // `TapGesture(count: 2)`: that recognizer competed in the same exclusive
+    // gesture pool as the freehand `DragGesture(minimumDistance: 0)` — which
+    // is satisfied on mouse-down and tends to win — and a count-1
+    // `SpatialTapGesture` fires on both halves of a double-click regardless,
+    // appending two coincident vertices as a side effect. See
+    // `DoubleClickDetector`.
     private var polygonTap: some Gesture {
         SpatialTapGesture(count: 1, coordinateSpace: .local)
             .onEnded { value in
                 guard selection.mode == .polygon else { return }
                 if selection.points.isEmpty { onBegan() }
                 guard isActive else { return }
-                selection.appendVertex(value.location)
+                let closes = doubleClickDetector.isSecondClick(
+                    at: value.location,
+                    time: Date().timeIntervalSinceReferenceDate,
+                    interval: NSEvent.doubleClickInterval
+                )
+                if closes {
+                    selection.removeLastVertex()   // the first half of the double-click
+                    closeIfPossible()
+                } else {
+                    selection.appendVertex(value.location)
+                }
             }
     }
 
