@@ -28,6 +28,10 @@ public final class FakeCaptureEngine: CaptureEngine, @unchecked Sendable {
         try await dispatch(.lastRegion)
     }
 
+    public func captureFreeform() async throws -> CaptureRecord {
+        try await dispatch(.freeform)
+    }
+
     // MARK: - Helpers
 
     private func dispatch(_ type: CaptureType) async throws -> CaptureRecord {

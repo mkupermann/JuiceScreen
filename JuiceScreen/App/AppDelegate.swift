@@ -246,6 +246,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case .window:      record = try await engine.captureWindow()
                 case .fullScreen:  record = try await engine.captureFullScreen()
                 case .lastRegion:  record = try await engine.captureLastRegion()
+                case .freeform:    record = try await engine.captureFreeform()
                 case .scroll:      scrollCaptureSessionManager.begin(); return
                 }
                 log.info("Captured \(String(describing: record.captureType)) → \(record.fileURL.path)")

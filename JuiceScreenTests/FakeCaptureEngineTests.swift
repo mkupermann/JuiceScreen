@@ -72,4 +72,32 @@ struct FakeCaptureEngineTests {
             _ = try await engine.captureFullScreen()
         }
     }
+
+    @Test("captureFreeform dispatches and records the freeform call")
+    func freeformDispatch() async throws {
+        let engine = FakeCaptureEngine()
+        let expected = CaptureRecord(
+            id: UUID(),
+            fileURL: URL(fileURLWithPath: "/tmp/freeform.png"),
+            captureType: .freeform,
+            capturedAt: Date(),
+            pixelWidth: 100,
+            pixelHeight: 80,
+            sourceApp: nil
+        )
+        engine.recordsToReturn[.freeform] = .success(expected)
+
+        let record = try await engine.captureFreeform()
+
+        #expect(record.captureType == .freeform)
+        #expect(engine.calls == [.freeform])
+    }
+
+    @Test("captureFreeform throws when no outcome is configured")
+    func freeformDefaultsToCancelled() async {
+        let engine = FakeCaptureEngine()
+        await #expect(throws: CaptureError.userCancelled) {
+            _ = try await engine.captureFreeform()
+        }
+    }
 }
