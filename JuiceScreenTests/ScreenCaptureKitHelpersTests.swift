@@ -173,4 +173,17 @@ struct DisplayLocalTopLeftTests {
         #expect(correct.minY == 100)
         #expect(naive != correct)
     }
+
+    @Test("globalBottomLeft is the exact inverse of displayLocalTopLeft")
+    func globalBottomLeftInverse() {
+        let screen = CGRect(x: 1920, y: 240, width: 2560, height: 1440)
+        let localTL = CGRect(x: 120, y: 340, width: 500, height: 250)
+
+        let global = ScreenCaptureKitHelpers.globalBottomLeft(localTL: localTL, screenFrame: screen)
+        // local BL y = 1440 - (340 + 250) = 850 → global y = 850 + 240 = 1090
+        #expect(global == CGRect(x: 2040, y: 1090, width: 500, height: 250))
+
+        let back = ScreenCaptureKitHelpers.displayLocalTopLeft(globalBL: global, displayFrame: screen)
+        #expect(back == localTL)
+    }
 }

@@ -33,6 +33,21 @@ public enum ScreenCaptureKitHelpers {
         )
     }
 
+    /// Inverse of `displayLocalTopLeft(globalBL:displayFrame:)`: converts an
+    /// overlay-local, top-left-origin rect into AppKit's global bottom-left space.
+    ///
+    /// - Parameters:
+    ///   - rect: The rect in the overlay's local top-left coordinates (points).
+    ///   - screenFrame: The overlay screen's `NSScreen.frame` (points).
+    public static func globalBottomLeft(localTL rect: CGRect, screenFrame: CGRect) -> CGRect {
+        CGRect(
+            x: rect.minX + screenFrame.minX,
+            y: (screenFrame.height - (rect.minY + rect.height)) + screenFrame.minY,
+            width: rect.width,
+            height: rect.height
+        )
+    }
+
     /// Returns the SCDisplay whose global frame contains `point`, or nil.
     /// `point` is in global bottom-left screen coordinates.
     @MainActor
