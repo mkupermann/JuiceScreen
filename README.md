@@ -16,7 +16,7 @@ Region, window, full-screen, and scrolling-area capture. Video recording with au
 
 The DMG is Developer ID signed and notarized by Apple, so first launch is a normal double-click — no right-click → Open dance.
 
-**Status:** v1.1.1 — signed and notarized, macOS 14+. Per-version detail in `docs/CHANGELOG.md`.
+**Status:** v1.1.2 — signed and notarized, macOS 14+. FreeForm capture is merged on `main` and not yet released. Per-version detail in `docs/CHANGELOG.md`.
 
 ## Contents
 
@@ -236,15 +236,15 @@ What this does **not** protect against:
 - No iCloud sync. By design — the library stays on the local machine.
 - macOS 15 may re-prompt for Screen Recording permission roughly weekly. Apple's behaviour, not configurable from inside the app.
 - Scroll capture works on most native macOS apps and simple web pages. It produces ghosting or torn frames on pages with sticky headers, lazy-loaded content, or parallax — about 30% of complex web pages in testing.
-- Scroll capture handles vertical scroll only in v1.0.
-- PDF export is rasterized. Vector PDF is on the v1.1 list.
+- Scroll capture handles vertical scroll only.
+- PDF export is rasterized, not vector.
 - The auto-update feed is served from GitHub Pages and can lag a new release by ~60 seconds.
-- Hotkey rebinding UI lands in v1.1; the Hotkeys settings tab is read-only in v1.0.
+- **Hotkeys cannot be rebound.** The Settings tab is a placeholder; the defaults listed below are the only bindings. An earlier version of this README said rebinding would land in v1.1 — it did not, and there is no date for it.
 
 What JuiceScreen deliberately does not do, and where the gaps are vs. CleanShot X / similar:
 
 - **No cloud upload, no shareable links.** The flow is `capture → file on disk → library`. There is no JuiceScreen-hosted destination, and adding one would change the project's local-first model.
-- **No GIF export in v1.0.** Recordings are MP4 only. GIF export is on the v1.1 list.
+- **No GIF export.** Recordings are MP4 only.
 - **No pinned / floating screenshots.** The annotation editor opens in a regular window; there is no "stick this to the screen above other windows" mode.
 - **No ProRes / HDR recording.** Recordings are H.264 8-bit at the rate selected in Settings.
 - **Not designed for managed-fleet deployment.** No Jamf / Munki recipe, no MDM-friendly default-off auto-update. JuiceScreen targets individual installs; fleet deploy is not a v1.x goal.
@@ -261,10 +261,10 @@ Bundled third-party dependencies, all permissive:
 
 ## Roadmap
 
-v1.1 is a wishlist, not a schedule — there is no paid maintainer behind this and no committed dates. Items below ship if and when there is time and (where noted) funding to ship them.
+A wishlist, not a schedule — there is no paid maintainer behind this and no committed dates. Items below ship if and when there is time to ship them. v1.1 shipped without several of the items this list used to promise for it; treat the list accordingly.
 
-- Vector PDF export (the v1.0 PDF is rasterized).
-- Horizontal scroll capture; sticky-header masking for the cases v1.0 ghosts on.
+- Vector PDF export (the current PDF is rasterized).
+- Horizontal scroll capture; sticky-header masking for the cases it currently ghosts on.
 - Optional iCloud library backup, off by default. The local-first model stays.
 - Hotkey rebinding UI in Settings.
 - Counter / numbered marker annotation tool.
