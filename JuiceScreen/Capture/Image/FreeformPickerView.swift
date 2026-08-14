@@ -10,12 +10,33 @@ struct FreeformPickerView: View {
 
     let canvasSize: CGSize
     let isActive: Bool
+    /// Shared with every other overlay of this pick — see `FreeformModeHolder`.
+    let mode: FreeformModeHolder
     let onBegan: () -> Void
     let onCommitted: (FreeformSelection?) -> Void
 
-    @State private var selection = FreeformSelection(mode: .freehand)
+    @State private var selection: FreeformSelection
     @State private var cursor: CGPoint?
     @State private var doubleClickDetector = DoubleClickDetector()
+
+    @MainActor
+    init(
+        canvasSize: CGSize,
+        isActive: Bool,
+        mode: FreeformModeHolder,
+        onBegan: @escaping () -> Void,
+        onCommitted: @escaping (FreeformSelection?) -> Void
+    ) {
+        self.canvasSize = canvasSize
+        self.isActive = isActive
+        self.mode = mode
+        self.onBegan = onBegan
+        self.onCommitted = onCommitted
+        // `markActive` rebuilds every other overlay's hosting view, which resets
+        // `@State`. Seeding from the shared holder is what stops that rebuild
+        // from silently dropping an overlay back to freehand.
+        _selection = State(initialValue: FreeformSelection(mode: mode.mode))
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -59,12 +80,23 @@ struct FreeformPickerView: View {
         }
         .ignoresSafeArea()
         // focusable() is required — onKeyPress only fires for a focused view, and
-        // without it Tab / Return / Backspace silently do nothing in the overlay.
+        // without it Return / Backspace silently do nothing in the overlay.
+        //
+        // Tab deliberately is NOT here: it is the only key that has to work
+        // before the user has clicked anything, and until they click, the key
+        // window is whichever overlay was ordered front last rather than the one
+        // under the cursor. `FreeformPickerController` drives it from a local
+        // monitor instead. Return and Backspace only matter after a click, and
+        // clicking an overlay makes that window key, so they are fine here.
         .focusable()
         .focusEffectDisabled()
-        .onKeyPress(.tab) { toggleMode(); return .handled }
         .onKeyPress(.return) { closeIfPossible(); return .handled }
         .onKeyPress(.delete) { selection.removeLastVertex(); return .handled }
+        // Reading `mode.mode` here is also what registers this view for
+        // observation, so every overlay re-renders when Tab flips the mode.
+        .onChange(of: mode.mode) { _, newMode in
+            selection.setMode(newMode)
+        }
     }
 
     // MARK: - Pieces
@@ -139,10 +171,6 @@ struct FreeformPickerView: View {
     }
 
     // MARK: - Actions
-
-    private func toggleMode() {
-        selection.setMode(selection.mode == .freehand ? .polygon : .freehand)
-    }
 
     private func closeIfPossible() {
         guard selection.mode == .polygon, isActive else { return }
