@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 /// The freeform drawing mode, shared by every overlay of one pick.
 ///
