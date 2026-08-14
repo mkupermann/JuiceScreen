@@ -17,6 +17,7 @@ public enum PDFEncoder {
         guard image.size.width > 0, image.size.height > 0 else {
             throw PDFEncoderError.zeroSize
         }
+        let image = ImageFlattener.onWhite(image)
         guard !image.representations.isEmpty else {
             throw PDFEncoderError.noRepresentations
         }

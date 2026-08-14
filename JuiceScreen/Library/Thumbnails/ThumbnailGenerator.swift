@@ -49,6 +49,8 @@ public enum ThumbnailGenerator {
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = nsCtx
         nsCtx.imageInterpolation = .high
+        nsCtx.cgContext.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+        nsCtx.cgContext.fill(CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
         nsCtx.cgContext.draw(cg, in: CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
         NSGraphicsContext.restoreGraphicsState()
 
