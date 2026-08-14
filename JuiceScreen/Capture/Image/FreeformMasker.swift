@@ -1,5 +1,4 @@
 import CoreGraphics
-import Foundation
 
 /// Clips a captured image to an arbitrary path, leaving everything outside the
 /// path fully transparent.

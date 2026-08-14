@@ -172,8 +172,15 @@ struct FreeformPickerView: View {
 
     // MARK: - Actions
 
+    /// Return, or the second click of a double-click, closes the polygon.
+    ///
+    /// With fewer than three points there is nothing to close, and the shape is
+    /// left standing so the user can keep placing vertices. Cancelling the whole
+    /// capture here would punish an early Return after the user deliberately
+    /// placed points — Esc remains the only way to cancel. Freehand keeps its
+    /// existing behaviour: a zero-size drag is unambiguously "never mind".
     private func closeIfPossible() {
-        guard selection.mode == .polygon, isActive else { return }
+        guard selection.mode == .polygon, isActive, selection.isUsable else { return }
         commit()
     }
 
