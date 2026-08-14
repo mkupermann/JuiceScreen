@@ -187,3 +187,41 @@ struct DisplayLocalTopLeftTests {
         #expect(back == localTL)
     }
 }
+
+/// The picker overlay must stay out of the shot; every other window of ours —
+/// the editor, the library, the settings sheet — is a legitimate capture target.
+@Suite("isPickerOverlayWindow")
+struct IsPickerOverlayWindowTests {
+
+    private let own = "com.bks-lab.juicescreen"
+
+    @Test("Our own screen-saver-level window is the picker overlay")
+    func ownOverlayExcluded() {
+        #expect(ScreenCaptureKitHelpers.isPickerOverlayWindow(
+            bundleIdentifier: own, windowLayer: 1000, ownBundleIdentifier: own) == true)
+    }
+
+    @Test("Our normal windows are NOT excluded — capturing the editor must work")
+    func ownNormalWindowKept() {
+        #expect(ScreenCaptureKitHelpers.isPickerOverlayWindow(
+            bundleIdentifier: own, windowLayer: 0, ownBundleIdentifier: own) == false)
+    }
+
+    @Test("Our menu-bar status item is not the overlay")
+    func ownStatusItemKept() {
+        #expect(ScreenCaptureKitHelpers.isPickerOverlayWindow(
+            bundleIdentifier: own, windowLayer: 25, ownBundleIdentifier: own) == false)
+    }
+
+    @Test("Another app's screen-saver-level window is never ours to exclude")
+    func foreignOverlayKept() {
+        #expect(ScreenCaptureKitHelpers.isPickerOverlayWindow(
+            bundleIdentifier: "com.apple.Terminal", windowLayer: 1000, ownBundleIdentifier: own) == false)
+    }
+
+    @Test("A window with no owning application is kept")
+    func unownedWindowKept() {
+        #expect(ScreenCaptureKitHelpers.isPickerOverlayWindow(
+            bundleIdentifier: nil, windowLayer: 1000, ownBundleIdentifier: own) == false)
+    }
+}

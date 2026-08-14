@@ -106,8 +106,7 @@ public final class CaptureEngineLive: CaptureEngine {
 
         let filter = SCContentFilter(
             display: display,
-            excludingApplications: try await ownApplications(),
-            exceptingWindows: []
+            excludingWindows: pickerOverlayWindows(in: content)
         )
         let cfg = ScreenCaptureKitHelpers.configuration(for: display)
         let cg = try await ScreenCaptureKitHelpers.captureImage(filter: filter, configuration: cfg)
@@ -165,10 +164,17 @@ public final class CaptureEngineLive: CaptureEngine {
         return 2.0
     }
 
-    nonisolated private func ownApplications() async throws -> [SCRunningApplication] {
+    /// Our own picker overlays, which must not appear in the capture. Everything
+    /// else we own — editor, library, settings — stays capturable.
+    nonisolated private func pickerOverlayWindows(in content: SCShareableContent) -> [SCWindow] {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.bks-lab.juicescreen"
-        let content = try await ScreenCaptureKitHelpers.shareableContent()
-        return content.applications.filter { $0.bundleIdentifier == bundleID }
+        return content.windows.filter {
+            ScreenCaptureKitHelpers.isPickerOverlayWindow(
+                bundleIdentifier: $0.owningApplication?.bundleIdentifier,
+                windowLayer: $0.windowLayer,
+                ownBundleIdentifier: bundleID
+            )
+        }
     }
 
     /// Shared by region, last-region and freeform: resolve the display holding
@@ -188,8 +194,7 @@ public final class CaptureEngineLive: CaptureEngine {
         )
         let filter = SCContentFilter(
             display: display,
-            excludingApplications: try await ownApplications(),
-            exceptingWindows: []
+            excludingWindows: pickerOverlayWindows(in: content)
         )
         let cfg = ScreenCaptureKitHelpers.configuration(for: display, regionInPoints: displayLocal)
         let cg = try await ScreenCaptureKitHelpers.captureImage(filter: filter, configuration: cfg)
