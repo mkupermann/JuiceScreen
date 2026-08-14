@@ -91,4 +91,54 @@ struct FreeformMaskerTests {
         let source = redImage(width: 10, height: 10)
         #expect(FreeformMasker.apply(path: topLeftQuadrant, pathSpaceSize: .zero, to: source) == nil)
     }
+
+    /// This is the only place a capture gains alpha, so hardcoding Device RGB
+    /// here strips the display's profile at exactly the moment transparency
+    /// appears — and `ImageFlattener` then faithfully preserves a colour space
+    /// the masker had already thrown away. Mirrors
+    /// `ImageFlattenerTests.flattenedOutputKeepsSourceColorSpace`.
+    @Test("Masked output keeps the source's colour space")
+    func maskedOutputKeepsSourceColorSpace() throws {
+        let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
+        let ctx = CGContext(
+            data: nil, width: 100, height: 100,
+            bitsPerComponent: 8, bytesPerRow: 0,
+            space: srgb,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+        ctx.setFillColor(CGColor(colorSpace: srgb, components: [1, 0, 0, 1])!)
+        ctx.fill(CGRect(x: 0, y: 0, width: 100, height: 100))
+        let source = ctx.makeImage()!
+        #expect(source.colorSpace?.name == CGColorSpace.sRGB)
+
+        let masked = try #require(
+            FreeformMasker.apply(path: topLeftQuadrant, pathSpaceSize: CGSize(width: 100, height: 100), to: source)
+        )
+        #expect(masked.colorSpace?.name == CGColorSpace.sRGB)
+    }
+
+    /// Not every source space can back an 8-bit `premultipliedLast` context.
+    /// RGB and monochrome can; CMYK, Lab, XYZ and indexed spaces make
+    /// `CGContext.init` return nil outright. Without the Device RGB retry those
+    /// sources produce nil here, which surfaces to the user as `captureFailed`.
+    @Test("A source space that cannot carry alpha still masks, via the Device RGB retry")
+    func unsupportedSourceColorSpaceRetriesInDeviceRGB() throws {
+        let cmyk = CGColorSpaceCreateDeviceCMYK()
+        let ctx = CGContext(
+            data: nil, width: 100, height: 100,
+            bitsPerComponent: 8, bytesPerRow: 0,
+            space: cmyk,
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
+        )!
+        ctx.setFillColor(CGColor(colorSpace: cmyk, components: [0, 1, 1, 0, 1])!)
+        ctx.fill(CGRect(x: 0, y: 0, width: 100, height: 100))
+        let source = ctx.makeImage()!
+        #expect(source.colorSpace?.model == .cmyk)
+
+        let masked = try #require(
+            FreeformMasker.apply(path: topLeftQuadrant, pathSpaceSize: CGSize(width: 100, height: 100), to: source)
+        )
+        #expect(pixel(masked, x: 10, y: 10).a == 255)
+        #expect(pixel(masked, x: 90, y: 90).a == 0)
+    }
 }
