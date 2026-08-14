@@ -162,7 +162,9 @@ enum ImageFlattener {
 }
 ```
 
-`JPGEncoder`, `PDFEncoder` and `ThumbnailGenerator` call it on entry. This changes behaviour for existing captures only in the case where an image already carries alpha, which today it never does — so the change is invisible for every capture taken before this feature.
+`JPGEncoder` and `PDFEncoder` call it on entry. `ThumbnailGenerator` applies the same policy but fills its existing bitmap context with white before drawing, rather than calling the helper — it already allocates a target-sized context, and routing through the helper would add a full-resolution RGBA copy of the source before downscaling (~100 MB for a large Retina capture) for no gain.
+
+This changes behaviour for existing captures only where an image already carries alpha, which today it never does — so the change is invisible for every capture taken before this feature.
 
 ## Data model
 
@@ -172,7 +174,9 @@ enum ImageFlattener {
 
 ## Wiring
 
-A `Capture Freeform` item in the menu-bar dropdown next to `Capture Region`, routed through `AppDelegate` exactly like the region action. A hotkey slot in preferences, **unassigned by default** rather than guessing a combination that collides with something the user already relies on.
+A `Capture Freeform` item in the menu-bar dropdown next to `Capture Region`, routed through `AppDelegate` exactly like the region action, plus `HotkeyAction.captureFreeform = 9` and `Preferences.captureFreeformHotkey`.
+
+Default binding **⌘⇧7** (keyCode 26). An unassigned default would be preferable, but `Hotkey` is a non-optional value type and every consumer — persistence, `HotkeyService.register`, the menu's shortcut string, the settings tab — assumes a binding exists. Making it optional is a larger change than this feature warrants. ⌘⇧7 continues the existing ⌘⇧2…⌘⇧6 family, is free in the current set (keyCodes 21, 19, 20, 15, 23, 37, 22), and is not a system shortcut.
 
 ## Testing
 
