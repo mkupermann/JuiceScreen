@@ -12,6 +12,7 @@ public enum JPGEncoder {
         guard image.size.width > 0, image.size.height > 0 else {
             throw JPGEncoderError.zeroSize
         }
+        let image = ImageFlattener.onWhite(image)
 
         if let rep = image.representations.first as? NSBitmapImageRep,
            let data = rep.representation(using: .jpeg, properties: [.compressionFactor: NSNumber(value: quality)]) {
