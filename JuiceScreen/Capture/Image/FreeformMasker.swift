@@ -22,15 +22,7 @@ public enum FreeformMasker {
             return nil
         }
 
-        guard let ctx = CGContext(
-            data: nil,
-            width: image.width,
-            height: image.height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ) else {
+        guard let ctx = maskContext(for: image) else {
             return nil
         }
 
@@ -48,5 +40,34 @@ public enum FreeformMasker {
         ctx.clip()
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
         return ctx.makeImage()
+    }
+
+    /// An alpha-carrying context in the source's own colour space, falling back
+    /// to Device RGB.
+    ///
+    /// This is the only place a capture gains alpha, so hardcoding Device RGB
+    /// would convert every freeform capture out of the display's profile at
+    /// exactly that moment — the same reason `ImageFlattener` was changed to
+    /// honour `cg.colorSpace`.
+    ///
+    /// The retry is not defensive padding: RGB and monochrome spaces can back
+    /// an 8-bit `premultipliedLast` context, but CMYK, Lab, XYZ and indexed
+    /// ones make `CGContext.init` return nil. Converting such a source into
+    /// Device RGB is far better than the alternative, which is `apply`
+    /// returning nil and the capture failing outright.
+    private static func maskContext(for image: CGImage) -> CGContext? {
+        func context(in space: CGColorSpace) -> CGContext? {
+            CGContext(
+                data: nil,
+                width: image.width,
+                height: image.height,
+                bitsPerComponent: 8,
+                bytesPerRow: 0,
+                space: space,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+        }
+        let space = image.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+        return context(in: space) ?? context(in: CGColorSpaceCreateDeviceRGB())
     }
 }
