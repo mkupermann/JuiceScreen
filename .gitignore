@@ -33,3 +33,6 @@ sparkle_keys/
 secrets/
 *.pem
 *-private-key.txt
+
+# SDD scratch workspace (subagent-driven-development)
+.superpowers/
