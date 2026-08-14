@@ -2,13 +2,14 @@
 
 All notable changes to JuiceScreen are documented here. This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-## [Unreleased]
+## [1.2.0] — 2026-08-14
 
 ### Added
 - **FreeForm capture (`⌘⇧7`).** Draw the shape you want instead of a rectangle. Freehand by default — hold the mouse down and trace — or press `Tab` before placing the first point to switch to polygon mode, where each click sets a vertex and `Return` or a double-click closes the shape. `Backspace` removes the last vertex, `Esc` cancels. The result is a PNG cropped to the shape's bounding box with everything outside the shape fully transparent.
 - The annotation editor now shows a checkerboard behind the image, so a transparent area is distinguishable from a white one. It is part of the editor's view only and never appears in an exported file.
 
 ### Fixed
+- **Capturing a region over one of JuiceScreen's own windows captured whatever was behind it.** The selection rectangle and the output size were both correct, but the image showed a different part of the screen — so it looked as though the wrong area had been captured. Both content filters excluded the whole application in order to keep the picker overlay out of the shot, which also removed the editor, the library and the settings window. Only the picker overlays are excluded now, identified by their window level rather than by their owning application.
 - **Scroll capture grabbed the wrong band, and the wrong display.** It passed the picker's rect straight into ScreenCaptureKit without converting from AppKit's global bottom-left space into the display-local top-left space `sourceRect` expects, and it always streamed from the first display regardless of where the selection was. Same class of bug as the region defect fixed in 1.1.2, one layer down.
 - **JPG and PDF exports, and library thumbnails, no longer render transparent areas black.** AppKit's default when flattening alpha is black; every lossy path now composites onto white explicitly. Opaque captures are untouched — the flattening only runs for images that actually carry an alpha channel, so existing captures keep both their old code path and their colour profile.
 
