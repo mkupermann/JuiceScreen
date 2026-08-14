@@ -8,7 +8,7 @@ struct CaptureRecordTests {
     @Test("CaptureType is exhaustively case-iterable")
     func captureTypeAllCases() {
         let all = Set(CaptureType.allCases)
-        #expect(all == [.region, .window, .fullScreen, .lastRegion, .scroll])
+        #expect(all == [.region, .window, .fullScreen, .lastRegion, .scroll, .freeform])
     }
 
     @Test("CaptureRecord stores all metadata fields")

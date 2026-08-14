@@ -5,4 +5,5 @@ public protocol CaptureEngine: Sendable {
     func captureWindow() async throws -> CaptureRecord
     func captureFullScreen() async throws -> CaptureRecord
     func captureLastRegion() async throws -> CaptureRecord
+    func captureFreeform() async throws -> CaptureRecord
 }

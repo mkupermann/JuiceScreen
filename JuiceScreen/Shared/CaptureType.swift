@@ -7,4 +7,5 @@ public enum CaptureType: String, CaseIterable, Sendable, Hashable {
     case fullScreen
     case lastRegion
     case scroll
+    case freeform
 }
